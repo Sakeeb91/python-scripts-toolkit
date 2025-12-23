@@ -11,6 +11,7 @@ import argparse
 import csv
 from pathlib import Path
 from collections import defaultdict
+from glob import glob
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import sys
@@ -22,36 +23,103 @@ from utils.logger import setup_logger
 from utils.helpers import parse_date
 
 
+
 class CSVReporter:
     """Generates reports from CSV data with aggregation and filtering."""
 
-    def __init__(self, input_path: Path):
-        self.input_path = Path(input_path)
+    def __init__(self, input_patterns: List[str]):
+        self.input_paths = self._resolve_paths(input_patterns)
         self.logger = setup_logger("csv_reporter")
         self.data: List[Dict[str, Any]] = []
         self.headers: List[str] = []
+        self.all_headers: List[str] = [] # FIX: Added to store all unique headers across merged files
         self.numeric_columns: List[str] = []
         self.date_column: Optional[str] = None
         self.category_column: Optional[str] = None
+        
+    def _resolve_paths(self, patterns: List[str]) -> List[Path]:
+        """Resolve glob patterns to existing file paths."""
+        files = []
+        for p in patterns:
+            # First, try to resolve relative to the current working directory
+            files.extend(Path(f) for f in glob(p))
+            # Then, try to resolve relative to DATA_DIR
+            files.extend(Path(f) for f in glob(str(DATA_DIR / p)))
+        return [f for f in files if f.is_file()]
 
-    def load(self) -> bool:
-        """Load and parse the CSV file."""
-        if not self.input_path.exists():
-            self.logger.error(f"File not found: {self.input_path}")
+    def load(self, merge_strategy: str = "append", join_key: Optional[str] = None) -> bool:
+        """Load and parse the CSV file(s) based on merge strategy."""
+        if not self.input_paths:
+            self.logger.error("No input files found.")
             return False
 
         try:
-            with open(self.input_path, 'r', newline='', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                self.headers = reader.fieldnames or []
-                self.data = list(reader)
+            if len(self.input_paths) == 1:
+                # Single file case
+                with open(self.input_paths[0], 'r', newline='', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    self.headers = list(reader.fieldnames or [])
+                    self.all_headers = list(self.headers)
+                    self.data = list(reader)
+                self.logger.info("Loaded %d rows from %s", len(self.data), self.input_paths[0].name)
+            else:
+                # Multiple files case
+                if merge_strategy == "append":
+                    all_data = []
+                    all_unique_headers = set()
+                    for path in self.input_paths:
+                        with open(path, 'r', newline='', encoding='utf-8') as f:
+                            reader = csv.DictReader(f)
+                            current_headers = reader.fieldnames or []
+                            all_unique_headers.update(current_headers)
+                            rows = list(reader)
+                            all_data.extend(rows)
+                            self.logger.info("Appended %d rows from %s", len(rows), path.name)
+                    self.headers = sorted(list(all_unique_headers))
+                    self.all_headers = list(self.headers) # FIX: Initialize all_headers for append
+                    self.data = all_data
+                    self.logger.info("Total loaded %d rows from %d files using 'append' strategy.", len(self.data), len(self.input_paths))
+
+                elif merge_strategy == "join":
+                    if not join_key:
+                        self.logger.error("Join strategy requires a --join-key.")
+                        return False
+                    
+                    # Check if join_key exists in all files
+                    if not all(join_key in (csv.DictReader(open(p, 'r', newline='', encoding='utf-8')).fieldnames or []) for p in self.input_paths):
+                        self.logger.error("Join key '%s' not found in all input files.", join_key)
+                        return False
+
+                    joined_data: Dict[str, Dict[str, Any]] = {}
+                    all_unique_headers = set()
+
+                    for i, path in enumerate(self.input_paths):
+                        with open(path, 'r', newline='', encoding='utf-8') as f:
+                            reader = csv.DictReader(f)
+                            current_headers = reader.fieldnames or []
+                            all_unique_headers.update(current_headers)
+                            for row in reader:
+                                key_value = row.get(join_key)
+                                if key_value:
+                                    if key_value not in joined_data:
+                                        joined_data[key_value] = {join_key: key_value} # Initialize with join_key
+                                    # Prefix columns from subsequent files to avoid conflicts, except for the join_key
+                                    prefix = f"file{i+1}_" if i > 0 else ""
+                                    for header, value in row.items():
+                                        if header != join_key:
+                                            joined_data[key_value][f"{prefix}{header}"] = value
+                                            all_unique_headers.add(f"{prefix}{header}") # Add prefixed header to unique headers
+                                        else:
+                                            joined_data[key_value][header] = value # Keep join_key as is
+                    self.data = list(joined_data.values())
+                    self.headers = sorted(list(all_unique_headers)) # FIX: Set headers to all unique headers
+                    self.all_headers = list(self.headers) # FIX: Initialize all_headers for join
+                    self.logger.info("Total loaded %d rows from %d files using 'join' strategy on key '%s'.", len(self.data), len(self.input_paths), join_key)
 
             self._detect_column_types()
-            self.logger.info(f"Loaded {len(self.data)} rows from {self.input_path.name}")
             return True
-
         except Exception as e:
-            self.logger.error(f"Error reading CSV: {e}")
+            self.logger.error("Error reading CSV: %s", e)
             return False
 
     def _detect_column_types(self) -> None:
@@ -141,8 +209,8 @@ class CSVReporter:
         data = data or self.data
 
         lines = [
-            "=" * 60,
-            f"CSV REPORT: {self.input_path.name}",
+            "=" * 60, # FIX: Changed to show all input file names
+            f"CSV REPORT: {', '.join([p.name for p in self.input_paths])}", # FIX: Show all input file names
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "=" * 60,
             "",
@@ -212,14 +280,14 @@ class CSVReporter:
         lines.append("=" * 60)
         return "\n".join(lines)
 
-    def export_summary_csv(self, output_path: Path, group_by: str) -> bool:
+    def export_summary_csv(self, output_path: Path, group_by: str, data: List[Dict[str, Any]]) -> bool:
         """Export a summary CSV grouped by a column."""
         if group_by not in self.headers:
-            self.logger.error(f"Column not found: {group_by}")
+            self.logger.error("Column not found: %s", group_by)
             return False
-
+        
         groups = defaultdict(list)
-        for row in self.data:
+        for row in data:
             key = row.get(group_by, "Unknown")
             groups[key].append(row)
 
@@ -238,10 +306,10 @@ class CSVReporter:
                     writer = csv.DictWriter(f, fieldnames=summary_data[0].keys())
                     writer.writeheader()
                     writer.writerows(summary_data)
-            self.logger.info(f"Summary exported to: {output_path}")
+            self.logger.info("Summary exported to: %s", output_path)
             return True
         except Exception as e:
-            self.logger.error(f"Error writing CSV: {e}")
+            self.logger.error("Error writing CSV: %s", e)
             return False
 
 
@@ -251,15 +319,26 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s expenses.csv                              # Basic report
-  %(prog)s expenses.csv --output report.txt         # Save to file
-  %(prog)s expenses.csv --group-by category         # Group by column
-  %(prog)s expenses.csv --filter-column type --filter-value "Food"
-  %(prog)s expenses.csv --date-from 2024-01-01 --date-to 2024-06-30
-        """
+  # Basic single-file report
+  reporter.py expenses.csv
+  # Multiple CSV files (append rows)
+  reporter.py jan.csv feb.csv mar.csv
+  # Using glob pattern
+  reporter.py *.csv
+  # Append merge explicitly
+  reporter.py *.csv --merge append
+  # Join CSVs on a common column
+  reporter.py users.csv orders.csv --merge join --join-key user_id
+  # Grouped report
+  reporter.py *.csv --group-by category
+  # Filter by column value
+  reporter.py expenses.csv --filter-column type --filter-value Food
+  # Date range filtering
+  reporter.py expenses.csv --date-from 2024-01-01 --date-to 2024-06-30
+  # Export grouped summary as CSV
+  reporter.py *.csv --group-by category --export-csv summary.csv"""
     )
-
-    parser.add_argument("input", type=Path, help="Input CSV file")
+    parser.add_argument("inputs", nargs="+", help="CSV files or glob patterns")
     parser.add_argument("--output", "-o", type=Path, help="Output file for report")
     parser.add_argument("--group-by", "-g", help="Column to group by")
     parser.add_argument("--filter-column", "-fc", help="Column to filter on")
@@ -267,11 +346,13 @@ Examples:
     parser.add_argument("--date-from", help="Start date (YYYY-MM-DD)")
     parser.add_argument("--date-to", help="End date (YYYY-MM-DD)")
     parser.add_argument("--export-csv", type=Path, help="Export summary as CSV")
-
+    parser.add_argument("--merge", choices=["append", "join"], default="append")
+    parser.add_argument("--join-key", help="Required for join")
     args = parser.parse_args()
 
-    reporter = CSVReporter(args.input)
-    if not reporter.load():
+    # FIX: Pass merge_strategy and join_key to CSVReporter constructor
+    reporter = CSVReporter(args.inputs)
+    if not reporter.load(args.merge, args.join_key):
         sys.exit(1)
 
     # Filter data
@@ -295,7 +376,7 @@ Examples:
 
     # Export summary CSV
     if args.export_csv and args.group_by:
-        reporter.export_summary_csv(args.export_csv, args.group_by)
+        reporter.export_summary_csv(args.export_csv, args.group_by, filtered_data)
 
 
 if __name__ == "__main__":
