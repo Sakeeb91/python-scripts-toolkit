@@ -1,0 +1,17 @@
+# Python Scripts Toolkit - Dependencies
+# =====================================
+
+# Core (no external dependencies required)
+# - File Organizer: uses only stdlib (os, pathlib, shutil)
+# - CSV Reporter: uses only stdlib (csv)
+# - Todo Manager: uses only stdlib (json)
+# - Email Reminder: uses only stdlib (smtplib, email)
+
+# Web Scraper (optional - only needed for scrape project)
+requests>=2.28.0
+beautifulsoup4>=4.11.0
+
+# Development dependencies (optional)
+# pytest>=7.0.0
+# black>=23.0.0
+# mypy>=1.0.0
