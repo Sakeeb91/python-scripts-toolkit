@@ -23,13 +23,13 @@ python main.py todo add "Learn Python"
 
 ## Projects
 
-| Project | Description | Key Concepts |
-|---------|-------------|--------------|
-| **File Organizer** | Sort messy folders by file type | `pathlib`, `shutil`, conditionals |
-| **CSV Reporter** | Generate reports from data | `csv` module, aggregation, filtering |
-| **Web Scraper** | Extract data from websites | `requests`, `BeautifulSoup`, HTTP |
-| **Todo Manager** | CLI task management | JSON storage, data modeling |
-| **Email Reminder** | Send conditional alerts | `smtplib`, scheduling, automation |
+| Project | Description | Key Concepts | Docs |
+|---------|-------------|--------------|------|
+| **File Organizer** | Sort messy folders by file type | `pathlib`, `shutil`, conditionals | [Read More](docs/file-organizer.md) |
+| **CSV Reporter** | Generate reports from data | `csv` module, aggregation, filtering | [Read More](docs/csv-reporter.md) |
+| **Web Scraper** | Extract data from websites | `requests`, `BeautifulSoup`, HTTP | [Read More](docs/web-scraper.md) |
+| **Todo Manager** | CLI task management | JSON storage, data modeling | [Read More](docs/todo-manager.md) |
+| **Email Reminder** | Send conditional alerts | `smtplib`, scheduling, automation | [Read More](docs/email-reminder.md) |
 
 ## Project Details
 
@@ -174,6 +174,12 @@ python-scripts-toolkit/
 ├── main.py                 # Unified CLI entry point
 ├── config.py               # Global configuration
 ├── requirements.txt
+├── docs/                   # Technical documentation
+│   ├── file-organizer.md   # File Organizer deep dive
+│   ├── csv-reporter.md     # CSV Reporter deep dive
+│   ├── web-scraper.md      # Web Scraper deep dive
+│   ├── todo-manager.md     # Todo Manager deep dive
+│   └── email-reminder.md   # Email Reminder deep dive
 ├── projects/
 │   ├── file_organizer/
 │   │   └── organizer.py
@@ -209,6 +215,18 @@ Edit `config.py` to customize:
 - Python 3.8+
 - No external dependencies for most projects
 - `requests` + `beautifulsoup4` for web scraper only
+
+## Documentation
+
+Each project has comprehensive technical documentation explaining concepts, code patterns, and extension ideas:
+
+| Document | What You'll Learn |
+|----------|-------------------|
+| [File Organizer Guide](docs/file-organizer.md) | `pathlib` vs `os.path`, extension mapping, dry-run patterns, `shutil` operations |
+| [CSV Reporter Guide](docs/csv-reporter.md) | `csv.DictReader`, type detection, aggregation patterns, ETL concepts |
+| [Web Scraper Guide](docs/web-scraper.md) | HTTP fundamentals, BeautifulSoup navigation, CSS selectors, ethical scraping |
+| [Todo Manager Guide](docs/todo-manager.md) | Data modeling, JSON serialization, CRUD patterns, CLI subcommands |
+| [Email Reminder Guide](docs/email-reminder.md) | SMTP protocol, credential security, scheduling with cron/launchd |
 
 ## Learning Path
 
