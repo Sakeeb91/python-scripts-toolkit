@@ -84,12 +84,13 @@ class FileOrganizer:
             return {"error": "Not a directory"}
 
         mode = "DRY RUN" if self.dry_run else "LIVE"
-        self.logger.info(f"Starting file organization [{mode}]: {self.source_dir}")
+        recursive_note = " [RECURSIVE]" if self.recursive else ""
+        self.logger.info(f"Starting file organization [{mode}]{recursive_note}: {self.source_dir}")
 
-        # Process each file in the source directory
-        for item in self.source_dir.iterdir():
-            if item.is_file():
-                self._process_file(item)
+        # Collect and process files
+        files = self._collect_files()
+        for file_path in files:
+            self._process_file(file_path)
 
         self._print_summary()
         return dict(self.stats)
