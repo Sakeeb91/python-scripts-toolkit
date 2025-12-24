@@ -44,6 +44,12 @@ python main.py organize ~/Downloads --dry-run
 # Organize and log changes
 python main.py organize ~/Downloads --log
 
+# Recursively organize including subdirectories
+python main.py organize ~/Downloads --recursive
+
+# Recursive with depth limit (e.g., 2 levels deep)
+python main.py organize ~/Downloads -r --max-depth 2
+
 # Run directly
 python -m projects.file_organizer.organizer ~/Downloads
 ```
@@ -53,6 +59,8 @@ python -m projects.file_organizer.organizer ~/Downloads
 - Safe handling of name collisions
 - Dry-run mode for preview
 - Operation logging
+- Recursive directory traversal with depth limiting
+- Automatic exclusion of hidden/system directories
 
 ---
 
