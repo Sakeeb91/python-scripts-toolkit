@@ -20,13 +20,25 @@ from config import FILE_ORGANIZER_CONFIG, LOGS_DIR
 from utils.logger import setup_logger
 from utils.helpers import get_unique_path, ensure_dir
 
+# Directories to skip during recursive traversal
+EXCLUDED_DIRS = {
+    '.git', '.svn', '.hg',           # Version control
+    '__pycache__', '.pytest_cache',  # Python cache
+    'node_modules', '.npm',          # Node.js
+    '.venv', 'venv', 'env',          # Virtual environments
+    '.idea', '.vscode',              # IDE folders
+    '.DS_Store', 'Thumbs.db',        # System files
+}
+
 
 class FileOrganizer:
     """Organizes files in a directory by their extensions."""
 
-    def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False):
+    def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None):
         self.source_dir = Path(source_dir)
         self.dry_run = dry_run
+        self.recursive = recursive
+        self.max_depth = max_depth
         self.categories = FILE_ORGANIZER_CONFIG["categories"]
         self.default_category = FILE_ORGANIZER_CONFIG["default_category"]
 
@@ -48,6 +60,80 @@ class FileOrganizer:
         ext = file_path.suffix.lower()
         return self.ext_map.get(ext, self.default_category)
 
+    def _get_depth(self, path: Path) -> int:
+        """Calculate depth of path relative to source directory.
+
+        Args:
+            path: Path to calculate depth for.
+
+        Returns:
+            Depth level (0 = direct child of source_dir).
+        """
+        try:
+            relative = path.relative_to(self.source_dir)
+            return len(relative.parts) - 1
+        except ValueError:
+            return 0
+
+    def _should_skip_path(self, path: Path, visited: set = None) -> bool:
+        """Check if a path should be skipped during traversal.
+
+        Args:
+            path: Path to check.
+            visited: Set of already visited real paths (for symlink loop detection).
+
+        Returns:
+            True if path should be skipped.
+        """
+        # Skip symlinks to avoid loops and unexpected behavior
+        if path.is_symlink():
+            return True
+        # Skip hidden files/directories (starting with .)
+        if path.name.startswith('.'):
+            return True
+        # Skip excluded directories
+        for part in path.parts:
+            if part in EXCLUDED_DIRS:
+                return True
+        # Symlink loop detection
+        if visited is not None:
+            try:
+                real_path = path.resolve()
+                if real_path in visited:
+                    return True
+                visited.add(real_path)
+            except OSError:
+                return True
+        return False
+
+    def _collect_files(self) -> list:
+        """Collect files to organize based on recursive setting.
+
+        Returns:
+            List of Path objects for files to process.
+        """
+        files = []
+        visited = set()  # Track visited paths for symlink loop detection
+        if self.recursive:
+            # Recursive: traverse all subdirectories
+            for item in self.source_dir.rglob('*'):
+                if not item.is_file():
+                    continue
+                if self._should_skip_path(item, visited):
+                    continue
+                # Check max depth limit
+                if self.max_depth is not None:
+                    depth = self._get_depth(item)
+                    if depth > self.max_depth:
+                        continue
+                files.append(item)
+        else:
+            # Non-recursive: only immediate children
+            for item in self.source_dir.iterdir():
+                if item.is_file() and not self._should_skip_path(item, visited):
+                    files.append(item)
+        return files
+
     def organize(self) -> dict:
         """
         Organize all files in the source directory.
@@ -64,12 +150,13 @@ class FileOrganizer:
             return {"error": "Not a directory"}
 
         mode = "DRY RUN" if self.dry_run else "LIVE"
-        self.logger.info(f"Starting file organization [{mode}]: {self.source_dir}")
+        recursive_note = " [RECURSIVE]" if self.recursive else ""
+        self.logger.info(f"Starting file organization [{mode}]{recursive_note}: {self.source_dir}")
 
-        # Process each file in the source directory
-        for item in self.source_dir.iterdir():
-            if item.is_file():
-                self._process_file(item)
+        # Collect and process files
+        files = self._collect_files()
+        for file_path in files:
+            self._process_file(file_path)
 
         self._print_summary()
         return dict(self.stats)
@@ -146,6 +233,8 @@ Examples:
   %(prog)s ~/Downloads                    # Organize Downloads folder
   %(prog)s ~/Downloads --dry-run          # Preview changes without moving files
   %(prog)s ~/Downloads --dry-run --log    # Preview and save log to file
+  %(prog)s ~/Downloads --recursive        # Organize including subdirectories
+  %(prog)s ~/Downloads -r --max-depth 2   # Recursive with depth limit
         """
     )
 
@@ -164,13 +253,26 @@ Examples:
         action="store_true",
         help="Save operation log to file"
     )
+    parser.add_argument(
+        "--recursive", "-r",
+        action="store_true",
+        help="Recursively organize files in subdirectories"
+    )
+    parser.add_argument(
+        "--max-depth", "-d",
+        type=int,
+        default=None,
+        help="Maximum directory depth for recursive traversal"
+    )
 
     args = parser.parse_args()
 
     organizer = FileOrganizer(
         source_dir=args.directory,
         dry_run=args.dry_run,
-        log_to_file=args.log
+        log_to_file=args.log,
+        recursive=args.recursive,
+        max_depth=args.max_depth
     )
 
     organizer.organize()
