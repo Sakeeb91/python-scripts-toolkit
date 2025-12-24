@@ -34,10 +34,11 @@ EXCLUDED_DIRS = {
 class FileOrganizer:
     """Organizes files in a directory by their extensions."""
 
-    def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False):
+    def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None):
         self.source_dir = Path(source_dir)
         self.dry_run = dry_run
         self.recursive = recursive
+        self.max_depth = max_depth
         self.categories = FILE_ORGANIZER_CONFIG["categories"]
         self.default_category = FILE_ORGANIZER_CONFIG["default_category"]
 
@@ -210,6 +211,7 @@ Examples:
   %(prog)s ~/Downloads --dry-run          # Preview changes without moving files
   %(prog)s ~/Downloads --dry-run --log    # Preview and save log to file
   %(prog)s ~/Downloads --recursive        # Organize including subdirectories
+  %(prog)s ~/Downloads -r --max-depth 2   # Recursive with depth limit
         """
     )
 
@@ -233,6 +235,12 @@ Examples:
         action="store_true",
         help="Recursively organize files in subdirectories"
     )
+    parser.add_argument(
+        "--max-depth", "-d",
+        type=int,
+        default=None,
+        help="Maximum directory depth for recursive traversal"
+    )
 
     args = parser.parse_args()
 
@@ -240,7 +248,8 @@ Examples:
         source_dir=args.directory,
         dry_run=args.dry_run,
         log_to_file=args.log,
-        recursive=args.recursive
+        recursive=args.recursive,
+        max_depth=args.max_depth
     )
 
     organizer.organize()
