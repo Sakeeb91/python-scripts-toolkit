@@ -84,11 +84,14 @@ class CSVReporter:
                     if not join_key:
                         self.logger.error("Join strategy requires a --join-key.")
                         return False
-                    
+
                     # Check if join_key exists in all files
-                    if not all(join_key in (csv.DictReader(open(p, 'r', newline='', encoding='utf-8')).fieldnames or []) for p in self.input_paths):
-                        self.logger.error("Join key '%s' not found in all input files.", join_key)
-                        return False
+                    for p in self.input_paths:
+                        with open(p, 'r', newline='', encoding='utf-8') as f:
+                            headers = csv.DictReader(f).fieldnames or []
+                            if join_key not in headers:
+                                self.logger.error("Join key '%s' not found in file: %s", join_key, p.name)
+                                return False
 
                     joined_data: Dict[str, Dict[str, Any]] = {}
                     all_unique_headers = set()
