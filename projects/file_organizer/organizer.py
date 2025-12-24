@@ -59,21 +59,34 @@ class FileOrganizer:
         ext = file_path.suffix.lower()
         return self.ext_map.get(ext, self.default_category)
 
-    def _should_skip_path(self, path: Path) -> bool:
+    def _should_skip_path(self, path: Path, visited: set = None) -> bool:
         """Check if a path should be skipped during traversal.
 
         Args:
             path: Path to check.
+            visited: Set of already visited real paths (for symlink loop detection).
 
         Returns:
             True if path should be skipped.
         """
+        # Skip symlinks to avoid loops and unexpected behavior
+        if path.is_symlink():
+            return True
         # Skip hidden files/directories (starting with .)
         if path.name.startswith('.'):
             return True
         # Skip excluded directories
         for part in path.parts:
             if part in EXCLUDED_DIRS:
+                return True
+        # Symlink loop detection
+        if visited is not None:
+            try:
+                real_path = path.resolve()
+                if real_path in visited:
+                    return True
+                visited.add(real_path)
+            except OSError:
                 return True
         return False
 
@@ -84,15 +97,16 @@ class FileOrganizer:
             List of Path objects for files to process.
         """
         files = []
+        visited = set()  # Track visited paths for symlink loop detection
         if self.recursive:
             # Recursive: traverse all subdirectories
             for item in self.source_dir.rglob('*'):
-                if item.is_file() and not self._should_skip_path(item):
+                if item.is_file() and not self._should_skip_path(item, visited):
                     files.append(item)
         else:
             # Non-recursive: only immediate children
             for item in self.source_dir.iterdir():
-                if item.is_file() and not self._should_skip_path(item):
+                if item.is_file() and not self._should_skip_path(item, visited):
                     files.append(item)
         return files
 
