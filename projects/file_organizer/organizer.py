@@ -55,7 +55,12 @@ class FileOrganizer:
         Returns:
             List of Path objects for files to process.
         """
-        pass
+        files = []
+        # Non-recursive: only immediate children
+        for item in self.source_dir.iterdir():
+            if item.is_file():
+                files.append(item)
+        return files
 
     def organize(self) -> dict:
         """
