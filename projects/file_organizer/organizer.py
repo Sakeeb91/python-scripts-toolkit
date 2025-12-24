@@ -60,6 +60,21 @@ class FileOrganizer:
         ext = file_path.suffix.lower()
         return self.ext_map.get(ext, self.default_category)
 
+    def _get_depth(self, path: Path) -> int:
+        """Calculate depth of path relative to source directory.
+
+        Args:
+            path: Path to calculate depth for.
+
+        Returns:
+            Depth level (0 = direct child of source_dir).
+        """
+        try:
+            relative = path.relative_to(self.source_dir)
+            return len(relative.parts) - 1
+        except ValueError:
+            return 0
+
     def _should_skip_path(self, path: Path, visited: set = None) -> bool:
         """Check if a path should be skipped during traversal.
 
@@ -102,8 +117,16 @@ class FileOrganizer:
         if self.recursive:
             # Recursive: traverse all subdirectories
             for item in self.source_dir.rglob('*'):
-                if item.is_file() and not self._should_skip_path(item, visited):
-                    files.append(item)
+                if not item.is_file():
+                    continue
+                if self._should_skip_path(item, visited):
+                    continue
+                # Check max depth limit
+                if self.max_depth is not None:
+                    depth = self._get_depth(item)
+                    if depth > self.max_depth:
+                        continue
+                files.append(item)
         else:
             # Non-recursive: only immediate children
             for item in self.source_dir.iterdir():
