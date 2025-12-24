@@ -77,7 +77,9 @@ def run_organize(args):
     organizer = FileOrganizer(
         source_dir=args.directory,
         dry_run=args.dry_run,
-        log_to_file=args.log
+        log_to_file=args.log,
+        recursive=args.recursive,
+        max_depth=args.max_depth
     )
     organizer.organize()
 
@@ -235,6 +237,8 @@ def main():
     org_parser.add_argument("directory", type=Path, help="Directory to organize")
     org_parser.add_argument("--dry-run", "-n", action="store_true", help="Preview without moving files")
     org_parser.add_argument("--log", action="store_true", help="Save log to file")
+    org_parser.add_argument("--recursive", "-r", action="store_true", help="Recursively organize subdirectories")
+    org_parser.add_argument("--max-depth", "-d", type=int, help="Maximum depth for recursive traversal")
 
     # CSV Reporter
     csv_parser = subparsers.add_parser("csv", help="Generate reports from CSV data")
