@@ -167,6 +167,7 @@ Examples:
   %(prog)s ~/Downloads                    # Organize Downloads folder
   %(prog)s ~/Downloads --dry-run          # Preview changes without moving files
   %(prog)s ~/Downloads --dry-run --log    # Preview and save log to file
+  %(prog)s ~/Downloads --recursive        # Organize including subdirectories
         """
     )
 
@@ -185,13 +186,19 @@ Examples:
         action="store_true",
         help="Save operation log to file"
     )
+    parser.add_argument(
+        "--recursive", "-r",
+        action="store_true",
+        help="Recursively organize files in subdirectories"
+    )
 
     args = parser.parse_args()
 
     organizer = FileOrganizer(
         source_dir=args.directory,
         dry_run=args.dry_run,
-        log_to_file=args.log
+        log_to_file=args.log,
+        recursive=args.recursive
     )
 
     organizer.organize()
