@@ -49,6 +49,14 @@ class FileOrganizer:
         ext = file_path.suffix.lower()
         return self.ext_map.get(ext, self.default_category)
 
+    def _collect_files(self) -> list:
+        """Collect files to organize based on recursive setting.
+
+        Returns:
+            List of Path objects for files to process.
+        """
+        pass
+
     def organize(self) -> dict:
         """
         Organize all files in the source directory.
