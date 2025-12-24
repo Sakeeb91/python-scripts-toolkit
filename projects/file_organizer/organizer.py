@@ -20,6 +20,16 @@ from config import FILE_ORGANIZER_CONFIG, LOGS_DIR
 from utils.logger import setup_logger
 from utils.helpers import get_unique_path, ensure_dir
 
+# Directories to skip during recursive traversal
+EXCLUDED_DIRS = {
+    '.git', '.svn', '.hg',           # Version control
+    '__pycache__', '.pytest_cache',  # Python cache
+    'node_modules', '.npm',          # Node.js
+    '.venv', 'venv', 'env',          # Virtual environments
+    '.idea', '.vscode',              # IDE folders
+    '.DS_Store', 'Thumbs.db',        # System files
+}
+
 
 class FileOrganizer:
     """Organizes files in a directory by their extensions."""
