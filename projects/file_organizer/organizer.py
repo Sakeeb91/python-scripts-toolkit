@@ -24,7 +24,7 @@ from utils.helpers import get_unique_path, ensure_dir
 class FileOrganizer:
     """Organizes files in a directory by their extensions."""
 
-    def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False):
+    def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False):
         self.source_dir = Path(source_dir)
         self.dry_run = dry_run
         self.categories = FILE_ORGANIZER_CONFIG["categories"]
