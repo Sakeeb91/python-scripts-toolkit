@@ -59,6 +59,24 @@ class FileOrganizer:
         ext = file_path.suffix.lower()
         return self.ext_map.get(ext, self.default_category)
 
+    def _should_skip_path(self, path: Path) -> bool:
+        """Check if a path should be skipped during traversal.
+
+        Args:
+            path: Path to check.
+
+        Returns:
+            True if path should be skipped.
+        """
+        # Skip hidden files/directories (starting with .)
+        if path.name.startswith('.'):
+            return True
+        # Skip excluded directories
+        for part in path.parts:
+            if part in EXCLUDED_DIRS:
+                return True
+        return False
+
     def _collect_files(self) -> list:
         """Collect files to organize based on recursive setting.
 
@@ -69,12 +87,12 @@ class FileOrganizer:
         if self.recursive:
             # Recursive: traverse all subdirectories
             for item in self.source_dir.rglob('*'):
-                if item.is_file():
+                if item.is_file() and not self._should_skip_path(item):
                     files.append(item)
         else:
             # Non-recursive: only immediate children
             for item in self.source_dir.iterdir():
-                if item.is_file():
+                if item.is_file() and not self._should_skip_path(item):
                     files.append(item)
         return files
 
