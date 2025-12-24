@@ -56,10 +56,16 @@ class FileOrganizer:
             List of Path objects for files to process.
         """
         files = []
-        # Non-recursive: only immediate children
-        for item in self.source_dir.iterdir():
-            if item.is_file():
-                files.append(item)
+        if self.recursive:
+            # Recursive: traverse all subdirectories
+            for item in self.source_dir.rglob('*'):
+                if item.is_file():
+                    files.append(item)
+        else:
+            # Non-recursive: only immediate children
+            for item in self.source_dir.iterdir():
+                if item.is_file():
+                    files.append(item)
         return files
 
     def organize(self) -> dict:
