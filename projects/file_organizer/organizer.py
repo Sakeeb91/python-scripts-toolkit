@@ -27,6 +27,7 @@ class FileOrganizer:
     def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False):
         self.source_dir = Path(source_dir)
         self.dry_run = dry_run
+        self.recursive = recursive
         self.categories = FILE_ORGANIZER_CONFIG["categories"]
         self.default_category = FILE_ORGANIZER_CONFIG["default_category"]
 
