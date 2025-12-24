@@ -72,6 +72,21 @@ python main.py csv expenses.csv --date-from 2024-01-01 --date-to 2024-06-30
 
 # Save to file
 python main.py csv expenses.csv --output report.txt
+
+# Merge multiple CSV files (append rows)
+python main.py csv jan.csv feb.csv mar.csv
+
+# Use glob patterns
+python main.py csv *.csv --merge append
+
+# Join CSVs on a common column
+python main.py csv users.csv orders.csv --merge join --join-key user_id
+
+# Remove duplicate rows
+python main.py csv *.csv --merge append --dedupe
+
+# Export grouped summary as CSV
+python main.py csv *.csv --group-by category --export-csv summary.csv
 ```
 
 **Features:**
@@ -79,6 +94,9 @@ python main.py csv expenses.csv --output report.txt
 - Calculates sum, average, min, max
 - Group by any column
 - Filter by value or date range
+- Merge multiple CSV files (append or join)
+- Glob pattern support for file selection
+- Deduplication of rows
 
 ---
 

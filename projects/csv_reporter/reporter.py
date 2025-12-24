@@ -47,7 +47,7 @@ class CSVReporter:
             files.extend(Path(f) for f in glob(str(DATA_DIR / p)))
         return [f for f in files if f.is_file()]
 
-    def load(self, merge_strategy: str = "append", join_key: Optional[str] = None) -> bool:
+    def load(self, merge_strategy: str = "append", join_key: Optional[str] = None, dedupe: bool = False) -> bool:
         """Load and parse the CSV file(s) based on merge strategy."""
         if not self.input_paths:
             self.logger.error("No input files found.")
@@ -84,11 +84,14 @@ class CSVReporter:
                     if not join_key:
                         self.logger.error("Join strategy requires a --join-key.")
                         return False
-                    
+
                     # Check if join_key exists in all files
-                    if not all(join_key in (csv.DictReader(open(p, 'r', newline='', encoding='utf-8')).fieldnames or []) for p in self.input_paths):
-                        self.logger.error("Join key '%s' not found in all input files.", join_key)
-                        return False
+                    for p in self.input_paths:
+                        with open(p, 'r', newline='', encoding='utf-8') as f:
+                            headers = csv.DictReader(f).fieldnames or []
+                            if join_key not in headers:
+                                self.logger.error("Join key '%s' not found in file: %s", join_key, p.name)
+                                return False
 
                     joined_data: Dict[str, Dict[str, Any]] = {}
                     all_unique_headers = set()
@@ -115,6 +118,22 @@ class CSVReporter:
                     self.headers = sorted(list(all_unique_headers)) # FIX: Set headers to all unique headers
                     self.all_headers = list(self.headers) # FIX: Initialize all_headers for join
                     self.logger.info("Total loaded %d rows from %d files using 'join' strategy on key '%s'.", len(self.data), len(self.input_paths), join_key)
+
+            # Deduplicate rows if requested
+            if dedupe and self.data:
+                original_count = len(self.data)
+                seen = set()
+                unique_data = []
+                for row in self.data:
+                    # Create a hashable key from sorted row items
+                    row_key = tuple(sorted((k, str(v)) for k, v in row.items()))
+                    if row_key not in seen:
+                        seen.add(row_key)
+                        unique_data.append(row)
+                self.data = unique_data
+                removed = original_count - len(self.data)
+                if removed > 0:
+                    self.logger.info("Removed %d duplicate rows.", removed)
 
             self._detect_column_types()
             return True
@@ -336,7 +355,9 @@ Examples:
   # Date range filtering
   reporter.py expenses.csv --date-from 2024-01-01 --date-to 2024-06-30
   # Export grouped summary as CSV
-  reporter.py *.csv --group-by category --export-csv summary.csv"""
+  reporter.py *.csv --group-by category --export-csv summary.csv
+  # Remove duplicate rows
+  reporter.py *.csv --merge append --dedupe"""
     )
     parser.add_argument("inputs", nargs="+", help="CSV files or glob patterns")
     parser.add_argument("--output", "-o", type=Path, help="Output file for report")
@@ -348,11 +369,11 @@ Examples:
     parser.add_argument("--export-csv", type=Path, help="Export summary as CSV")
     parser.add_argument("--merge", choices=["append", "join"], default="append")
     parser.add_argument("--join-key", help="Required for join")
+    parser.add_argument("--dedupe", action="store_true", help="Remove duplicate rows")
     args = parser.parse_args()
 
-    # FIX: Pass merge_strategy and join_key to CSVReporter constructor
     reporter = CSVReporter(args.inputs)
-    if not reporter.load(args.merge, args.join_key):
+    if not reporter.load(args.merge, args.join_key, args.dedupe):
         sys.exit(1)
 
     # Filter data
