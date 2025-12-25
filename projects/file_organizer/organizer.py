@@ -5,8 +5,11 @@ Usage:
     python -m projects.file_organizer.organizer /path/to/folder
     python -m projects.file_organizer.organizer /path/to/folder --dry-run
     python -m projects.file_organizer.organizer /path/to/folder --log
+    python -m projects.file_organizer.organizer --undo
+    python -m projects.file_organizer.organizer --list-history
 """
 import argparse
+import json
 import shutil
 from pathlib import Path
 from collections import defaultdict
@@ -16,7 +19,7 @@ import sys
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from config import FILE_ORGANIZER_CONFIG, LOGS_DIR
+from config import FILE_ORGANIZER_CONFIG, LOGS_DIR, MANIFESTS_DIR
 from utils.logger import setup_logger
 from utils.helpers import get_unique_path, ensure_dir
 
@@ -34,11 +37,12 @@ EXCLUDED_DIRS = {
 class FileOrganizer:
     """Organizes files in a directory by their extensions."""
 
-    def __init__(self, source_dir: Path, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None):
-        self.source_dir = Path(source_dir)
+    def __init__(self, source_dir: Path = None, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None, manifest_dir: Path = None):
+        self.source_dir = Path(source_dir) if source_dir else None
         self.dry_run = dry_run
         self.recursive = recursive
         self.max_depth = max_depth
+        self.manifest_dir = Path(manifest_dir) if manifest_dir else MANIFESTS_DIR
         self.categories = FILE_ORGANIZER_CONFIG["categories"]
         self.default_category = FILE_ORGANIZER_CONFIG["default_category"]
 
