@@ -236,6 +236,40 @@ class FileOrganizer:
         self.logger.info(f"Manifest saved: {manifest_path.name}")
         return manifest_path
 
+    def _load_manifest(self, manifest_path: Path = None) -> dict:
+        """Load a manifest file for undo operations.
+
+        Args:
+            manifest_path: Specific manifest file to load. If None, loads the
+                          most recent manifest from the manifest directory.
+
+        Returns:
+            Manifest data dictionary, or None if no manifest found.
+        """
+        if manifest_path:
+            path = Path(manifest_path)
+            if not path.exists():
+                self.logger.error(f"Manifest not found: {manifest_path}")
+                return None
+        else:
+            # Find most recent manifest
+            if not self.manifest_dir.exists():
+                self.logger.error("No manifest directory found")
+                return None
+
+            manifests = sorted(self.manifest_dir.glob("organize_*.json"), reverse=True)
+            if not manifests:
+                self.logger.error("No manifests found")
+                return None
+
+            path = manifests[0]
+
+        with open(path, 'r') as f:
+            data = json.load(f)
+
+        data['_manifest_path'] = str(path)
+        return data
+
     def get_report(self) -> str:
         """Generate a detailed report of the operation."""
         lines = [
