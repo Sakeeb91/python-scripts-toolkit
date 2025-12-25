@@ -88,11 +88,11 @@ class FileOrganizer:
         # Skip symlinks to avoid loops and unexpected behavior
         if path.is_symlink():
             return True
-        # Skip hidden files/directories (starting with .)
-        if path.name.startswith('.'):
-            return True
-        # Skip excluded directories
+        # Skip hidden files/directories (any part starting with .)
         for part in path.parts:
+            if part.startswith('.'):
+                return True
+            # Also check excluded directories
             if part in EXCLUDED_DIRS:
                 return True
         # Symlink loop detection

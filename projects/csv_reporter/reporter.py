@@ -39,13 +39,22 @@ class CSVReporter:
         
     def _resolve_paths(self, patterns: List[str]) -> List[Path]:
         """Resolve glob patterns to existing file paths."""
+        seen = set()
         files = []
         for p in patterns:
             # First, try to resolve relative to the current working directory
-            files.extend(Path(f) for f in glob(p))
+            for f in glob(p):
+                path = Path(f).resolve()
+                if path not in seen and path.is_file():
+                    seen.add(path)
+                    files.append(Path(f))
             # Then, try to resolve relative to DATA_DIR
-            files.extend(Path(f) for f in glob(str(DATA_DIR / p)))
-        return [f for f in files if f.is_file()]
+            for f in glob(str(DATA_DIR / p)):
+                path = Path(f).resolve()
+                if path not in seen and path.is_file():
+                    seen.add(path)
+                    files.append(Path(f))
+        return files
 
     def load(self, merge_strategy: str = "append", join_key: Optional[str] = None, dedupe: bool = False) -> bool:
         """Load and parse the CSV file(s) based on merge strategy."""
