@@ -434,12 +434,17 @@ Examples:
   %(prog)s ~/Downloads --dry-run --log    # Preview and save log to file
   %(prog)s ~/Downloads --recursive        # Organize including subdirectories
   %(prog)s ~/Downloads -r --max-depth 2   # Recursive with depth limit
+  %(prog)s --undo                         # Undo most recent organization
+  %(prog)s --undo --manifest organize_2024-01-15_10-30-00.json
+  %(prog)s --list-history                 # Show all previous operations
         """
     )
 
     parser.add_argument(
         "directory",
         type=Path,
+        nargs='?',
+        default=None,
         help="Directory to organize"
     )
     parser.add_argument(
@@ -463,8 +468,39 @@ Examples:
         default=None,
         help="Maximum directory depth for recursive traversal"
     )
+    parser.add_argument(
+        "--undo", "-u",
+        action="store_true",
+        help="Undo a previous organization operation"
+    )
+    parser.add_argument(
+        "--list-history",
+        action="store_true",
+        help="List all previous organization operations"
+    )
+    parser.add_argument(
+        "--manifest", "-m",
+        type=Path,
+        default=None,
+        help="Specific manifest file to use for undo"
+    )
 
     args = parser.parse_args()
+
+    # Handle undo and list-history operations (don't require directory)
+    if args.list_history:
+        organizer = FileOrganizer(log_to_file=args.log)
+        organizer.list_history()
+        return
+
+    if args.undo:
+        organizer = FileOrganizer(log_to_file=args.log)
+        organizer.undo(manifest_path=args.manifest)
+        return
+
+    # For organize operation, directory is required
+    if not args.directory:
+        parser.error("directory is required for organize operation")
 
     organizer = FileOrganizer(
         source_dir=args.directory,
