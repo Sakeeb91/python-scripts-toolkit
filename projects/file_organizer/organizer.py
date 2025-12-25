@@ -163,6 +163,7 @@ class FileOrganizer:
             self._process_file(file_path)
 
         self._print_summary()
+        self._save_manifest()
         return dict(self.stats)
 
     def _process_file(self, file_path: Path) -> None:
