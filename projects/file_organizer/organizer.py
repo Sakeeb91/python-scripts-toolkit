@@ -345,6 +345,57 @@ class FileOrganizer:
 
         return {"restored": restored, "skipped": skipped, "failed": failed}
 
+    def list_history(self) -> list:
+        """List all available organization manifests.
+
+        Returns:
+            List of manifest summaries, sorted by date (newest first).
+        """
+        if not self.manifest_dir.exists():
+            self.logger.info("No organization history found")
+            return []
+
+        manifests = sorted(self.manifest_dir.glob("organize_*.json"), reverse=True)
+        if not manifests:
+            self.logger.info("No organization history found")
+            return []
+
+        self.logger.info(f"\n{'='*60}")
+        self.logger.info("Organization History")
+        self.logger.info(f"{'='*60}")
+
+        history = []
+        for i, manifest_path in enumerate(manifests, 1):
+            try:
+                with open(manifest_path, 'r') as f:
+                    data = json.load(f)
+
+                summary = {
+                    "index": i,
+                    "filename": manifest_path.name,
+                    "timestamp": data.get("timestamp", "Unknown"),
+                    "source_dir": data.get("source_dir", "Unknown"),
+                    "files_moved": data.get("files_moved", len(data.get("moves", []))),
+                    "recursive": data.get("recursive", False),
+                }
+                history.append(summary)
+
+                self.logger.info(f"\n  [{i}] {manifest_path.name}")
+                self.logger.info(f"      Timestamp: {summary['timestamp']}")
+                self.logger.info(f"      Source: {summary['source_dir']}")
+                self.logger.info(f"      Files: {summary['files_moved']}")
+                if summary['recursive']:
+                    self.logger.info(f"      Mode: Recursive")
+
+            except (json.JSONDecodeError, KeyError) as e:
+                self.logger.warning(f"  [{i}] {manifest_path.name} (corrupted)")
+
+        self.logger.info(f"\n{'='*60}")
+        self.logger.info(f"Total: {len(history)} operation(s) in history")
+        self.logger.info("Use --undo to restore the most recent, or --undo --manifest <filename>")
+
+        return history
+
     def get_report(self) -> str:
         """Generate a detailed report of the operation."""
         lines = [
