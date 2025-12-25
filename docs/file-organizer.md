@@ -330,25 +330,70 @@ FILE_ORGANIZER_CONFIG = {
 
 ---
 
+## Undo/Rollback Feature
+
+The File Organizer includes built-in undo functionality that lets you restore files to their original locations.
+
+### How It Works
+
+After each organization operation (non-dry-run), a **manifest file** is saved to `data/manifests/`. This JSON file records:
+- Timestamp of the operation
+- Source directory that was organized
+- Every file move (original path → destination path)
+- Organization mode (recursive, max-depth)
+
+### Usage Examples
+
+```bash
+# Organize files normally (creates a manifest)
+python main.py organize ~/Downloads
+
+# Undo the most recent organization
+python main.py organize --undo
+
+# View history of all organization operations
+python main.py organize --list-history
+
+# Undo a specific operation by manifest filename
+python main.py organize --undo --manifest organize_2024-01-15_10-30-00.json
+```
+
+### What Undo Handles
+
+| Scenario | Behavior |
+|----------|----------|
+| File still exists at destination | Moves back to original location |
+| File was deleted after organizing | Skipped (with warning) |
+| Original location is now occupied | Skipped (with warning) |
+| Empty category directories | Automatically removed |
+| Successful complete undo | Manifest file is deleted |
+
+### Manifest Structure
+
+```json
+{
+  "timestamp": "2024-01-15T10:30:00.123456",
+  "source_dir": "/Users/me/Downloads",
+  "recursive": false,
+  "max_depth": null,
+  "files_moved": 15,
+  "moves": [
+    {
+      "source": "/Users/me/Downloads/photo.jpg",
+      "destination": "/Users/me/Downloads/Images/photo.jpg",
+      "category": "Images"
+    }
+  ]
+}
+```
+
+---
+
 ## Extending the Project
 
 ### Ideas for Enhancement
 
-1. **Undo Functionality**
-   ```python
-   # Save moves to a log file
-   def save_move_log(self):
-       log = {"timestamp": datetime.now().isoformat(), "moves": self.moved_files}
-       save_json(log, "last_organize.json")
-
-   # Restore from log
-   def undo_last_organize(self):
-       log = load_json("last_organize.json")
-       for move in reversed(log["moves"]):
-           shutil.move(move["destination"], move["source"])
-   ```
-
-2. **Duplicate Detection**
+1. **Duplicate Detection**
    ```python
    import hashlib
 
@@ -361,7 +406,7 @@ FILE_ORGANIZER_CONFIG = {
        return hash_md5.hexdigest()
    ```
 
-3. **Date-Based Organization**
+2. **Date-Based Organization**
    ```python
    def get_date_folder(file_path: Path) -> str:
        """Organize by modification date."""
@@ -370,7 +415,7 @@ FILE_ORGANIZER_CONFIG = {
        return date.strftime("%Y/%m")  # "2024/01"
    ```
 
-4. **Watch Mode with Continuous Monitoring**
+3. **Watch Mode with Continuous Monitoring**
    ```python
    from watchdog.observers import Observer
    from watchdog.events import FileSystemEventHandler
@@ -397,5 +442,7 @@ The File Organizer teaches these core Python concepts:
 | Conditionals | Category classification |
 | Classes | Encapsulating state and behavior |
 | Logging | Operation tracking |
+| `json` | Manifest serialization |
+| File I/O | Undo/rollback persistence |
 
 This is a practical script that solves a real problem while demonstrating fundamental Python patterns used in professional codebases.
