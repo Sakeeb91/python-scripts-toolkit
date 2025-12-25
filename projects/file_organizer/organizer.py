@@ -270,6 +270,81 @@ class FileOrganizer:
         data['_manifest_path'] = str(path)
         return data
 
+    def undo(self, manifest_path: Path = None) -> dict:
+        """Undo a previous organization operation by restoring files.
+
+        Args:
+            manifest_path: Specific manifest to undo. If None, uses most recent.
+
+        Returns:
+            Dictionary with undo statistics, or error info.
+        """
+        manifest = self._load_manifest(manifest_path)
+        if not manifest:
+            return {"error": "No manifest found"}
+
+        self.logger.info(f"Undoing organization from: {manifest['timestamp']}")
+        self.logger.info(f"Original source: {manifest['source_dir']}")
+
+        restored = 0
+        failed = 0
+        skipped = 0
+
+        # Process moves in reverse order
+        for move in reversed(manifest['moves']):
+            dest = Path(move['destination'])
+            source = Path(move['source'])
+
+            if not dest.exists():
+                self.logger.warning(f"  File not found (skipped): {dest.name}")
+                skipped += 1
+                continue
+
+            if source.exists():
+                self.logger.warning(f"  Original location occupied (skipped): {source.name}")
+                skipped += 1
+                continue
+
+            try:
+                # Ensure source directory exists
+                source.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(dest), str(source))
+                self.logger.info(f"  Restored: {dest.name} -> {source.parent.name}/")
+                restored += 1
+            except (PermissionError, OSError) as e:
+                self.logger.error(f"  Failed to restore {dest.name}: {e}")
+                failed += 1
+
+        # Remove empty category directories
+        source_dir = Path(manifest['source_dir'])
+        for category in set(m['category'] for m in manifest['moves']):
+            category_dir = source_dir / category
+            if category_dir.exists() and not any(category_dir.iterdir()):
+                try:
+                    category_dir.rmdir()
+                    self.logger.info(f"  Removed empty directory: {category}/")
+                except OSError:
+                    pass
+
+        # Summary
+        self.logger.info(f"\n{'='*50}")
+        self.logger.info(f"Undo Summary")
+        self.logger.info(f"{'='*50}")
+        self.logger.info(f"  Restored: {restored} files")
+        if skipped:
+            self.logger.info(f"  Skipped: {skipped} files")
+        if failed:
+            self.logger.info(f"  Failed: {failed} files")
+
+        # Remove manifest after successful undo
+        if failed == 0:
+            manifest_file = Path(manifest['_manifest_path'])
+            if manifest_file.exists():
+                manifest_file.unlink()
+                self.logger.info(f"  Removed manifest: {manifest_file.name}")
+
+        return {"restored": restored, "skipped": skipped, "failed": failed}
+
     def get_report(self) -> str:
         """Generate a detailed report of the operation."""
         lines = [
