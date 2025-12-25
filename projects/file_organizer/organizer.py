@@ -201,6 +201,40 @@ class FileOrganizer:
         self.logger.info(f"{'='*50}")
         self.logger.info(f"Total: {total} files {'would be ' if self.dry_run else ''}organized")
 
+    def _save_manifest(self) -> Path:
+        """Save a manifest file recording the organization operation.
+
+        The manifest contains all file moves for later undo/rollback.
+        Only saves if there were actual file moves (not dry-run).
+
+        Returns:
+            Path to the saved manifest file, or None if nothing to save.
+        """
+        if self.dry_run or not self.moved_files:
+            return None
+
+        # Ensure manifest directory exists
+        self.manifest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate timestamped filename
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        manifest_path = self.manifest_dir / f"organize_{timestamp}.json"
+
+        manifest_data = {
+            "timestamp": datetime.now().isoformat(),
+            "source_dir": str(self.source_dir),
+            "recursive": self.recursive,
+            "max_depth": self.max_depth,
+            "files_moved": len(self.moved_files),
+            "moves": self.moved_files,
+        }
+
+        with open(manifest_path, 'w') as f:
+            json.dump(manifest_data, f, indent=2)
+
+        self.logger.info(f"Manifest saved: {manifest_path.name}")
+        return manifest_path
+
     def get_report(self) -> str:
         """Generate a detailed report of the operation."""
         lines = [
