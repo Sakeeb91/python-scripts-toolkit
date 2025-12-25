@@ -47,6 +47,7 @@ Available Projects:
   organize    Smart File Organizer
               Sort files into folders by type (images, docs, code, etc.)
               Example: python main.py organize ~/Downloads --dry-run
+              Undo:    python main.py organize --undo
 
   csv         CSV Report Generator
               Generate summary reports from CSV data
@@ -73,6 +74,22 @@ Run 'python main.py <project> --help' for project-specific options.
 def run_organize(args):
     """Run the file organizer project."""
     from projects.file_organizer.organizer import FileOrganizer
+
+    # Handle undo and list-history (don't require directory)
+    if args.list_history:
+        organizer = FileOrganizer(log_to_file=args.log)
+        organizer.list_history()
+        return
+
+    if args.undo:
+        organizer = FileOrganizer(log_to_file=args.log)
+        organizer.undo(manifest_path=args.manifest)
+        return
+
+    # Regular organize operation requires directory
+    if not args.directory:
+        print("ERROR: directory is required for organize operation")
+        sys.exit(1)
 
     organizer = FileOrganizer(
         source_dir=args.directory,
@@ -234,11 +251,14 @@ def main():
 
     # File Organizer
     org_parser = subparsers.add_parser("organize", help="Sort files into folders by type")
-    org_parser.add_argument("directory", type=Path, help="Directory to organize")
+    org_parser.add_argument("directory", type=Path, nargs='?', default=None, help="Directory to organize")
     org_parser.add_argument("--dry-run", "-n", action="store_true", help="Preview without moving files")
     org_parser.add_argument("--log", action="store_true", help="Save log to file")
     org_parser.add_argument("--recursive", "-r", action="store_true", help="Recursively organize subdirectories")
     org_parser.add_argument("--max-depth", "-d", type=int, help="Maximum depth for recursive traversal")
+    org_parser.add_argument("--undo", "-u", action="store_true", help="Undo a previous organization")
+    org_parser.add_argument("--list-history", action="store_true", help="List previous organization operations")
+    org_parser.add_argument("--manifest", "-m", type=Path, help="Specific manifest file for undo")
 
     # CSV Reporter
     csv_parser = subparsers.add_parser("csv", help="Generate reports from CSV data")
