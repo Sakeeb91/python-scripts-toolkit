@@ -41,6 +41,9 @@ Automatically sort files into categorized subfolders (Images, Documents, Code, e
 # Preview changes without moving
 python main.py organize ~/Downloads --dry-run
 
+# Interactive mode (ask before each move)
+python main.py organize ~/Downloads --interactive
+
 # Organize and log changes
 python main.py organize ~/Downloads --log
 
@@ -67,6 +70,7 @@ python -m projects.file_organizer.organizer ~/Downloads
 - Configurable file categories by extension
 - Safe handling of name collisions
 - Dry-run mode for preview
+- Interactive mode for file-by-file confirmation and category changing
 - Operation logging
 - Recursive directory traversal with depth limiting
 - Automatic exclusion of hidden/system directories

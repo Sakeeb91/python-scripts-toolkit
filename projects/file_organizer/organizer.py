@@ -53,11 +53,12 @@ EXCLUDED_DIRS = {
 class FileOrganizer:
     """Organizes files in a directory by their extensions or dates."""
 
-    def __init__(self, source_dir: Path = None, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None, manifest_dir: Path = None,
+    def __init__(self, source_dir: Path = None, dry_run: bool = False, interactive: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None, manifest_dir: Path = None,
                  by_date: bool = False, date_format: str = None, date_type: str = None, combine_with_type: bool = False,
                  min_size: int = None, max_size: int = None):
-        self.source_dir = Path(source_dir) if source_dir else None
+        self.source_dir = Path(source_dir).resolve() if source_dir else None
         self.dry_run = dry_run
+        self.interactive = interactive
         self.recursive = recursive
         self.max_depth = max_depth
         self.manifest_dir = Path(manifest_dir) if manifest_dir else MANIFESTS_DIR
@@ -284,6 +285,40 @@ class FileOrganizer:
         self._save_manifest()
         return dict(self.stats)
 
+    def _prompt_user(self, file_path: Path, category: str) -> str:
+        """Prompt user for action on a file.
+
+        Returns:
+            New category string to use, or None if file should be skipped.
+            Updates self.interactive flag if 'all' is selected.
+        """
+        dest_path = self.source_dir / category / file_path.name
+        
+        print(f"\nFile: {file_path.name}")
+        print(f"  Category: {category}")
+        print(f"  Move to: {dest_path}")
+
+        while True:
+            choice = input("  [y]es / [n]o / [a]ll / [q]uit / [c]hange category? ").lower().strip()
+            
+            if choice in ('y', 'yes', ''):
+                return category
+            elif choice in ('n', 'no', 'skip'):
+                return None
+            elif choice in ('a', 'all'):
+                self.interactive = False
+                return category
+            elif choice in ('q', 'quit'):
+                print("Aborting...")
+                sys.exit(0)
+            elif choice in ('c', 'change'):
+                print(f"  Available categories: {', '.join(sorted(self.categories.keys()))}")
+                new_cat = input("  Enter new category: ").strip()
+                if new_cat:
+                    return new_cat
+            else:
+                print("  Invalid option. Please try again.")
+
     def _process_file(self, file_path: Path) -> None:
         """Process a single file based on organization mode."""
         # Determine the destination path based on organization mode
@@ -299,6 +334,12 @@ class FileOrganizer:
         else:
             # Type-based only (original behavior)
             category = self.get_category(file_path)
+
+        if self.interactive:
+            category = self._prompt_user(file_path, category)
+            if category is None:
+                self.logger.info(f"  Skipped: {file_path.name}")
+                return
 
         dest_dir = self.source_dir / category
         dest_path = dest_dir / file_path.name
@@ -596,6 +637,11 @@ Examples:
         help="Show what would be done without actually moving files"
     )
     parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Ask for confirmation before moving each file"
+    )
+    parser.add_argument(
         "--log", "-l",
         action="store_true",
         help="Save operation log to file"
@@ -686,6 +732,7 @@ Examples:
     organizer = FileOrganizer(
         source_dir=args.directory,
         dry_run=args.dry_run,
+        interactive=args.interactive,
         log_to_file=args.log,
         recursive=args.recursive,
         max_depth=args.max_depth,
