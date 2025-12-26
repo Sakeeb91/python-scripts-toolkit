@@ -96,7 +96,11 @@ def run_organize(args):
         dry_run=args.dry_run,
         log_to_file=args.log,
         recursive=args.recursive,
-        max_depth=args.max_depth
+        max_depth=args.max_depth,
+        by_date=args.by_date,
+        date_format=args.date_format,
+        date_type=args.date_type,
+        combine_with_type=args.combine_with_type
     )
     organizer.organize()
 
@@ -255,7 +259,11 @@ def main():
     org_parser.add_argument("--dry-run", "-n", action="store_true", help="Preview without moving files")
     org_parser.add_argument("--log", action="store_true", help="Save log to file")
     org_parser.add_argument("--recursive", "-r", action="store_true", help="Recursively organize subdirectories")
-    org_parser.add_argument("--max-depth", "-d", type=int, help="Maximum depth for recursive traversal")
+    org_parser.add_argument("--max-depth", type=int, help="Maximum depth for recursive traversal")
+    org_parser.add_argument("--by-date", action="store_true", help="Organize by date (e.g., 2024/January/)")
+    org_parser.add_argument("--date-format", choices=["YYYY/MM", "YYYY/Month", "YYYY-MM-DD", "YYYY/MM/DD"], help="Date folder format")
+    org_parser.add_argument("--date-type", choices=["modified", "created"], help="Use modification or creation date")
+    org_parser.add_argument("--combine-with-type", action="store_true", help="Combine date and type (e.g., 2024/January/Images/)")
     org_parser.add_argument("--undo", "-u", action="store_true", help="Undo a previous organization")
     org_parser.add_argument("--list-history", action="store_true", help="List previous organization operations")
     org_parser.add_argument("--manifest", "-m", type=Path, help="Specific manifest file for undo")
