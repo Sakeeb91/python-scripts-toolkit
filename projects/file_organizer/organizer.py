@@ -191,6 +191,35 @@ class FileOrganizer:
                 return True
         return False
 
+    def _check_size_filter(self, file_path: Path) -> bool:
+        """Check if a file passes the size filter.
+
+        Args:
+            file_path: Path to the file to check.
+
+        Returns:
+            True if file passes the filter (should be processed),
+            False if file should be skipped.
+        """
+        if self.min_size is None and self.max_size is None:
+            return True
+
+        try:
+            file_size = file_path.stat().st_size
+        except OSError:
+            # If we can't get the file size, skip it
+            return False
+
+        if self.min_size is not None and file_size < self.min_size:
+            self.logger.debug(f"  Skipping {file_path.name}: size {file_size}B < min {self.min_size}B")
+            return False
+
+        if self.max_size is not None and file_size > self.max_size:
+            self.logger.debug(f"  Skipping {file_path.name}: size {file_size}B > max {self.max_size}B")
+            return False
+
+        return True
+
     def _collect_files(self) -> list:
         """Collect files to organize based on recursive setting.
 
