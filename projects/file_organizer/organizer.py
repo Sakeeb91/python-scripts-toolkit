@@ -1,10 +1,20 @@
 """
-Smart File Organizer - Sorts files into subfolders by type.
+Smart File Organizer - Sorts files into subfolders by type or date.
 
 Usage:
+    # Basic organization by file type
     python -m projects.file_organizer.organizer /path/to/folder
     python -m projects.file_organizer.organizer /path/to/folder --dry-run
-    python -m projects.file_organizer.organizer /path/to/folder --log
+
+    # Date-based organization
+    python -m projects.file_organizer.organizer ~/Photos --by-date
+    python -m projects.file_organizer.organizer ~/Photos --by-date --date-format "YYYY/MM"
+    python -m projects.file_organizer.organizer ~/Photos --by-date --date-type created
+
+    # Combined date and type organization
+    python -m projects.file_organizer.organizer ~/Downloads --by-date --combine-with-type
+
+    # Undo and history
     python -m projects.file_organizer.organizer --undo
     python -m projects.file_organizer.organizer --list-history
 """
@@ -502,14 +512,19 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s ~/Downloads                    # Organize Downloads folder
-  %(prog)s ~/Downloads --dry-run          # Preview changes without moving files
-  %(prog)s ~/Downloads --dry-run --log    # Preview and save log to file
-  %(prog)s ~/Downloads --recursive        # Organize including subdirectories
-  %(prog)s ~/Downloads -r --max-depth 2   # Recursive with depth limit
-  %(prog)s --undo                         # Undo most recent organization
-  %(prog)s --undo --manifest organize_2024-01-15_10-30-00.json
-  %(prog)s --list-history                 # Show all previous operations
+  %(prog)s ~/Downloads                    # Organize by file type
+  %(prog)s ~/Downloads --dry-run          # Preview changes without moving
+  %(prog)s ~/Downloads --recursive        # Include subdirectories
+
+  # Date-based organization:
+  %(prog)s ~/Photos --by-date                        # 2024/January/
+  %(prog)s ~/Photos --by-date --date-format YYYY/MM  # 2024/01/
+  %(prog)s ~/Photos --by-date --date-type created    # Use creation date
+  %(prog)s ~/Photos --by-date --combine-with-type    # 2024/January/Images/
+
+  # Undo operations:
+  %(prog)s --undo                         # Undo most recent
+  %(prog)s --list-history                 # Show all operations
         """
     )
 
