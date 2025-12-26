@@ -74,6 +74,7 @@ Run 'python main.py <project> --help' for project-specific options.
 def run_organize(args):
     """Run the file organizer project."""
     from projects.file_organizer.organizer import FileOrganizer
+    from utils.helpers import parse_size
 
     # Handle undo and list-history (don't require directory)
     if args.list_history:
@@ -91,6 +92,10 @@ def run_organize(args):
         print("ERROR: directory is required for organize operation")
         sys.exit(1)
 
+    # Parse size filters
+    min_size = parse_size(args.min_size) if args.min_size else None
+    max_size = parse_size(args.max_size) if args.max_size else None
+
     organizer = FileOrganizer(
         source_dir=args.directory,
         dry_run=args.dry_run,
@@ -100,7 +105,9 @@ def run_organize(args):
         by_date=args.by_date,
         date_format=args.date_format,
         date_type=args.date_type,
-        combine_with_type=args.combine_with_type
+        combine_with_type=args.combine_with_type,
+        min_size=min_size,
+        max_size=max_size
     )
     organizer.organize()
 
@@ -264,6 +271,8 @@ def main():
     org_parser.add_argument("--date-format", choices=["YYYY/MM", "YYYY/Month", "YYYY-MM-DD", "YYYY/MM/DD"], help="Date folder format")
     org_parser.add_argument("--date-type", choices=["modified", "created"], help="Use modification or creation date")
     org_parser.add_argument("--combine-with-type", action="store_true", help="Combine date and type (e.g., 2024/January/Images/)")
+    org_parser.add_argument("--min-size", type=str, help="Skip files smaller than this size (e.g., 1KB, 10MB)")
+    org_parser.add_argument("--max-size", type=str, help="Skip files larger than this size (e.g., 100MB, 1GB)")
     org_parser.add_argument("--undo", "-u", action="store_true", help="Undo a previous organization")
     org_parser.add_argument("--list-history", action="store_true", help="List previous organization operations")
     org_parser.add_argument("--manifest", "-m", type=Path, help="Specific manifest file for undo")
