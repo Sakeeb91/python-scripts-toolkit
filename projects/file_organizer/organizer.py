@@ -14,6 +14,11 @@ Usage:
     # Combined date and type organization
     python -m projects.file_organizer.organizer ~/Downloads --by-date --combine-with-type
 
+    # Size-based filtering
+    python -m projects.file_organizer.organizer ~/Downloads --min-size 1KB
+    python -m projects.file_organizer.organizer ~/Downloads --max-size 100MB
+    python -m projects.file_organizer.organizer ~/Downloads --min-size 1KB --max-size 500MB
+
     # Undo and history
     python -m projects.file_organizer.organizer --undo
     python -m projects.file_organizer.organizer --list-history
@@ -32,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from config import FILE_ORGANIZER_CONFIG, LOGS_DIR, MANIFESTS_DIR
 from utils.logger import setup_logger
-from utils.helpers import get_unique_path, ensure_dir
+from utils.helpers import get_unique_path, ensure_dir, parse_size
 
 # Directories to skip during recursive traversal
 EXCLUDED_DIRS = {
@@ -49,7 +54,8 @@ class FileOrganizer:
     """Organizes files in a directory by their extensions or dates."""
 
     def __init__(self, source_dir: Path = None, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None, manifest_dir: Path = None,
-                 by_date: bool = False, date_format: str = None, date_type: str = None, combine_with_type: bool = False):
+                 by_date: bool = False, date_format: str = None, date_type: str = None, combine_with_type: bool = False,
+                 min_size: int = None, max_size: int = None):
         self.source_dir = Path(source_dir) if source_dir else None
         self.dry_run = dry_run
         self.recursive = recursive
