@@ -240,11 +240,19 @@ class FileOrganizer:
                     depth = self._get_depth(item)
                     if depth > self.max_depth:
                         continue
+                # Check size filter
+                if not self._check_size_filter(item):
+                    self.skipped_by_size += 1
+                    continue
                 files.append(item)
         else:
             # Non-recursive: only immediate children
             for item in self.source_dir.iterdir():
                 if item.is_file() and not self._should_skip_path(item, visited):
+                    # Check size filter
+                    if not self._check_size_filter(item):
+                        self.skipped_by_size += 1
+                        continue
                     files.append(item)
         return files
 
