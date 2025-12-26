@@ -553,6 +553,12 @@ Examples:
         help="Date format for folder names (default: YYYY/Month)"
     )
     parser.add_argument(
+        "--date-type",
+        choices=["modified", "created"],
+        default=None,
+        help="Use file modification or creation date (default: modified)"
+    )
+    parser.add_argument(
         "--undo", "-u",
         action="store_true",
         help="Undo a previous organization operation"
@@ -593,7 +599,8 @@ Examples:
         recursive=args.recursive,
         max_depth=args.max_depth,
         by_date=args.by_date,
-        date_format=args.date_format
+        date_format=args.date_format,
+        date_type=args.date_type
     )
 
     organizer.organize()
