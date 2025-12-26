@@ -572,6 +572,11 @@ Examples:
   %(prog)s ~/Photos --by-date --date-type created    # Use creation date
   %(prog)s ~/Photos --by-date --combine-with-type    # 2024/January/Images/
 
+  # Size-based filtering:
+  %(prog)s ~/Downloads --min-size 1KB                # Skip tiny files
+  %(prog)s ~/Downloads --max-size 100MB              # Skip large files
+  %(prog)s ~/Downloads --min-size 1KB --max-size 500MB
+
   # Undo operations:
   %(prog)s --undo                         # Undo most recent
   %(prog)s --list-history                 # Show all operations
