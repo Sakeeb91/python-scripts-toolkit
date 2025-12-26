@@ -71,6 +71,10 @@ class FileOrganizer:
         self.date_type = date_type or FILE_ORGANIZER_CONFIG.get("default_date_type", "modified")
         self.combine_with_type = combine_with_type
 
+        # Size-based filtering settings
+        self.min_size = min_size
+        self.max_size = max_size
+
         log_dir = LOGS_DIR if log_to_file else None
         self.logger = setup_logger("file_organizer", log_dir)
 
@@ -83,6 +87,7 @@ class FileOrganizer:
         # Track statistics
         self.stats = defaultdict(int)
         self.moved_files = []
+        self.skipped_by_size = 0
 
     def get_category(self, file_path: Path) -> str:
         """Determine the category for a file based on its extension."""
