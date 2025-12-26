@@ -99,6 +99,7 @@ def run_organize(args):
     organizer = FileOrganizer(
         source_dir=args.directory,
         dry_run=args.dry_run,
+        interactive=args.interactive,
         log_to_file=args.log,
         recursive=args.recursive,
         max_depth=args.max_depth,
@@ -264,6 +265,7 @@ def main():
     org_parser = subparsers.add_parser("organize", help="Sort files into folders by type")
     org_parser.add_argument("directory", type=Path, nargs='?', default=None, help="Directory to organize")
     org_parser.add_argument("--dry-run", "-n", action="store_true", help="Preview without moving files")
+    org_parser.add_argument("--interactive", "-i", action="store_true", help="Ask for confirmation before moving each file")
     org_parser.add_argument("--log", action="store_true", help="Save log to file")
     org_parser.add_argument("--recursive", "-r", action="store_true", help="Recursively organize subdirectories")
     org_parser.add_argument("--max-depth", type=int, help="Maximum depth for recursive traversal")
