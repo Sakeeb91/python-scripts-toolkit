@@ -10,6 +10,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import shutil
 from pathlib import Path
 from collections import defaultdict
@@ -71,6 +72,37 @@ class FileOrganizer:
         """Determine the category for a file based on its extension."""
         ext = file_path.suffix.lower()
         return self.ext_map.get(ext, self.default_category)
+
+    def get_file_date(self, file_path: Path) -> datetime:
+        """Get the relevant date for a file based on date_type setting.
+
+        Args:
+            file_path: Path to the file.
+
+        Returns:
+            datetime object for the file's date. Falls back to modification
+            time if creation time is unavailable.
+        """
+        try:
+            stat_info = os.stat(file_path)
+
+            if self.date_type == "created":
+                # On macOS/Windows, st_birthtime is creation time
+                # On Linux, st_ctime is metadata change time (not creation)
+                if hasattr(stat_info, 'st_birthtime'):
+                    timestamp = stat_info.st_birthtime
+                else:
+                    # Fall back to modification time on Linux
+                    timestamp = stat_info.st_mtime
+                    self.logger.debug(f"Creation time unavailable for {file_path.name}, using modification time")
+            else:
+                # Default to modification time
+                timestamp = stat_info.st_mtime
+
+            return datetime.fromtimestamp(timestamp)
+        except (OSError, ValueError) as e:
+            self.logger.warning(f"Could not get date for {file_path.name}: {e}")
+            return datetime.now()
 
     def _get_depth(self, path: Path) -> int:
         """Calculate depth of path relative to source directory.
