@@ -542,6 +542,17 @@ Examples:
         help="Maximum directory depth for recursive traversal"
     )
     parser.add_argument(
+        "--by-date",
+        action="store_true",
+        help="Organize files by date instead of type (e.g., 2024/January/)"
+    )
+    parser.add_argument(
+        "--date-format",
+        choices=["YYYY/MM", "YYYY/Month", "YYYY-MM-DD", "YYYY/MM/DD"],
+        default=None,
+        help="Date format for folder names (default: YYYY/Month)"
+    )
+    parser.add_argument(
         "--undo", "-u",
         action="store_true",
         help="Undo a previous organization operation"
@@ -580,7 +591,9 @@ Examples:
         dry_run=args.dry_run,
         log_to_file=args.log,
         recursive=args.recursive,
-        max_depth=args.max_depth
+        max_depth=args.max_depth,
+        by_date=args.by_date,
+        date_format=args.date_format
     )
 
     organizer.organize()
