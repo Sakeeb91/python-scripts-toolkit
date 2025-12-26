@@ -50,6 +50,15 @@ python main.py organize ~/Downloads --recursive
 # Recursive with depth limit (e.g., 2 levels deep)
 python main.py organize ~/Downloads -r --max-depth 2
 
+# Size-based filtering: skip small files
+python main.py organize ~/Downloads --min-size 1KB
+
+# Size-based filtering: skip large files
+python main.py organize ~/Downloads --max-size 100MB
+
+# Combine size filters
+python main.py organize ~/Downloads --min-size 1KB --max-size 500MB
+
 # Run directly
 python -m projects.file_organizer.organizer ~/Downloads
 ```
@@ -61,6 +70,7 @@ python -m projects.file_organizer.organizer ~/Downloads
 - Operation logging
 - Recursive directory traversal with depth limiting
 - Automatic exclusion of hidden/system directories
+- Size-based filtering (skip files by min/max size)
 
 ---
 
