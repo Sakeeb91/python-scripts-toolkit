@@ -77,3 +77,56 @@ def parse_date(date_str: str) -> datetime:
         except ValueError:
             continue
     raise ValueError(f"Unable to parse date: {date_str}")
+
+
+def parse_size(size_str: str) -> int:
+    """Parse human-readable file size string to bytes.
+
+    Supports formats like: 100, 1KB, 10MB, 1.5GB, 500B
+    Case insensitive: 1kb, 1KB, 1Kb all work.
+
+    Args:
+        size_str: Size string like "1KB", "10MB", "1.5GB"
+
+    Returns:
+        Size in bytes as integer.
+
+    Raises:
+        ValueError: If the size string format is invalid.
+
+    Examples:
+        >>> parse_size("1KB")
+        1024
+        >>> parse_size("10MB")
+        10485760
+        >>> parse_size("1.5GB")
+        1610612736
+    """
+    size_str = size_str.strip().upper()
+
+    # Unit multipliers (using binary units: 1KB = 1024 bytes)
+    units = {
+        'B': 1,
+        'KB': 1024,
+        'MB': 1024 ** 2,
+        'GB': 1024 ** 3,
+        'TB': 1024 ** 4,
+    }
+
+    # Try to match number + unit pattern
+    import re
+    match = re.match(r'^([0-9]*\.?[0-9]+)\s*([A-Z]*B?)$', size_str)
+    if not match:
+        raise ValueError(f"Invalid size format: {size_str}. Use formats like: 100, 1KB, 10MB, 1.5GB")
+
+    number_str, unit = match.groups()
+    number = float(number_str)
+
+    # Default to bytes if no unit specified
+    if not unit:
+        unit = 'B'
+
+    if unit not in units:
+        raise ValueError(f"Unknown size unit: {unit}. Valid units: B, KB, MB, GB, TB")
+
+    return int(number * units[unit])
