@@ -35,9 +35,10 @@ EXCLUDED_DIRS = {
 
 
 class FileOrganizer:
-    """Organizes files in a directory by their extensions."""
+    """Organizes files in a directory by their extensions or dates."""
 
-    def __init__(self, source_dir: Path = None, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None, manifest_dir: Path = None):
+    def __init__(self, source_dir: Path = None, dry_run: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None, manifest_dir: Path = None,
+                 by_date: bool = False, date_format: str = None, date_type: str = None, combine_with_type: bool = False):
         self.source_dir = Path(source_dir) if source_dir else None
         self.dry_run = dry_run
         self.recursive = recursive
@@ -45,6 +46,13 @@ class FileOrganizer:
         self.manifest_dir = Path(manifest_dir) if manifest_dir else MANIFESTS_DIR
         self.categories = FILE_ORGANIZER_CONFIG["categories"]
         self.default_category = FILE_ORGANIZER_CONFIG["default_category"]
+
+        # Date-based organization settings
+        self.by_date = by_date
+        self.date_formats = FILE_ORGANIZER_CONFIG.get("date_formats", {})
+        self.date_format = date_format or FILE_ORGANIZER_CONFIG.get("default_date_format", "YYYY/Month")
+        self.date_type = date_type or FILE_ORGANIZER_CONFIG.get("default_date_type", "modified")
+        self.combine_with_type = combine_with_type
 
         log_dir = LOGS_DIR if log_to_file else None
         self.logger = setup_logger("file_organizer", log_dir)
