@@ -22,6 +22,16 @@ FILE_ORGANIZER_CONFIG = {
         "Executables": [".exe", ".msi", ".dmg", ".app", ".deb", ".rpm"],
     },
     "default_category": "Other",
+    # Date-based organization settings
+    "date_formats": {
+        "YYYY/MM": "%Y/%m",           # e.g., 2024/01
+        "YYYY/Month": "%Y/%B",        # e.g., 2024/January
+        "YYYY-MM-DD": "%Y-%m-%d",     # e.g., 2024-01-15
+        "YYYY/MM/DD": "%Y/%m/%d",     # e.g., 2024/01/15
+    },
+    "default_date_format": "YYYY/Month",
+    "date_types": ["modified", "created"],
+    "default_date_type": "modified",
 }
 
 # CSV Reporter settings
