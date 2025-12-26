@@ -634,6 +634,18 @@ Examples:
         help="Combine date and type organization (e.g., 2024/January/Images/)"
     )
     parser.add_argument(
+        "--min-size",
+        type=str,
+        default=None,
+        help="Skip files smaller than this size (e.g., 1KB, 10MB, 1GB)"
+    )
+    parser.add_argument(
+        "--max-size",
+        type=str,
+        default=None,
+        help="Skip files larger than this size (e.g., 100MB, 1GB)"
+    )
+    parser.add_argument(
         "--undo", "-u",
         action="store_true",
         help="Undo a previous organization operation"
@@ -667,6 +679,10 @@ Examples:
     if not args.directory:
         parser.error("directory is required for organize operation")
 
+    # Parse size filters
+    min_size = parse_size(args.min_size) if args.min_size else None
+    max_size = parse_size(args.max_size) if args.max_size else None
+
     organizer = FileOrganizer(
         source_dir=args.directory,
         dry_run=args.dry_run,
@@ -676,7 +692,9 @@ Examples:
         by_date=args.by_date,
         date_format=args.date_format,
         date_type=args.date_type,
-        combine_with_type=args.combine_with_type
+        combine_with_type=args.combine_with_type,
+        min_size=min_size,
+        max_size=max_size
     )
 
     organizer.organize()
