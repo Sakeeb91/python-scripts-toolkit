@@ -559,6 +559,11 @@ Examples:
         help="Use file modification or creation date (default: modified)"
     )
     parser.add_argument(
+        "--combine-with-type",
+        action="store_true",
+        help="Combine date and type organization (e.g., 2024/January/Images/)"
+    )
+    parser.add_argument(
         "--undo", "-u",
         action="store_true",
         help="Undo a previous organization operation"
@@ -600,7 +605,8 @@ Examples:
         max_depth=args.max_depth,
         by_date=args.by_date,
         date_format=args.date_format,
-        date_type=args.date_type
+        date_type=args.date_type,
+        combine_with_type=args.combine_with_type
     )
 
     organizer.organize()
