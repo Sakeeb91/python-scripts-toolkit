@@ -104,6 +104,26 @@ class FileOrganizer:
             self.logger.warning(f"Could not get date for {file_path.name}: {e}")
             return datetime.now()
 
+    def get_date_category(self, file_path: Path) -> str:
+        """Generate a date-based category path for a file.
+
+        Args:
+            file_path: Path to the file.
+
+        Returns:
+            A path string based on the file's date (e.g., "2024/January").
+        """
+        file_date = self.get_file_date(file_path)
+
+        # Get the strftime format string for the selected date format
+        strftime_format = self.date_formats.get(self.date_format)
+        if not strftime_format:
+            # If format not found, use default YYYY/Month
+            strftime_format = "%Y/%B"
+            self.logger.warning(f"Unknown date format '{self.date_format}', using YYYY/Month")
+
+        return file_date.strftime(strftime_format)
+
     def _get_depth(self, path: Path) -> int:
         """Calculate depth of path relative to source directory.
 
