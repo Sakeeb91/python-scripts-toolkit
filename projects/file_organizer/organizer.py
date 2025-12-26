@@ -227,8 +227,21 @@ class FileOrganizer:
         return dict(self.stats)
 
     def _process_file(self, file_path: Path) -> None:
-        """Process a single file."""
-        category = self.get_category(file_path)
+        """Process a single file based on organization mode."""
+        # Determine the destination path based on organization mode
+        if self.by_date:
+            date_category = self.get_date_category(file_path)
+            if self.combine_with_type:
+                # Combine date and type: 2024/January/Images/
+                type_category = self.get_category(file_path)
+                category = f"{date_category}/{type_category}"
+            else:
+                # Date only: 2024/January/
+                category = date_category
+        else:
+            # Type-based only (original behavior)
+            category = self.get_category(file_path)
+
         dest_dir = self.source_dir / category
         dest_path = dest_dir / file_path.name
 
