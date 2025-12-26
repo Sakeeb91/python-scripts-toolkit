@@ -332,6 +332,8 @@ class FileOrganizer:
 
         self.logger.info(f"{'='*50}")
         self.logger.info(f"Total: {total} files {'would be ' if self.dry_run else ''}organized")
+        if self.skipped_by_size > 0:
+            self.logger.info(f"Skipped: {self.skipped_by_size} files (size filter)")
 
     def _save_manifest(self) -> Path:
         """Save a manifest file recording the organization operation.
