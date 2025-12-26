@@ -50,13 +50,18 @@ EXCLUDED_DIRS = {
 }
 
 
+class UserAbort(Exception):
+    """Exception raised when user aborts the operation."""
+    pass
+
+
 class FileOrganizer:
     """Organizes files in a directory by their extensions or dates."""
 
     def __init__(self, source_dir: Path = None, dry_run: bool = False, interactive: bool = False, log_to_file: bool = False, recursive: bool = False, max_depth: int = None, manifest_dir: Path = None,
                  by_date: bool = False, date_format: str = None, date_type: str = None, combine_with_type: bool = False,
                  min_size: int = None, max_size: int = None):
-        self.source_dir = Path(source_dir).resolve() if source_dir else None
+        self.source_dir = Path(source_dir) if source_dir else None
         self.dry_run = dry_run
         self.interactive = interactive
         self.recursive = recursive
@@ -278,8 +283,11 @@ class FileOrganizer:
 
         # Collect and process files
         files = self._collect_files()
-        for file_path in files:
-            self._process_file(file_path)
+        try:
+            for file_path in files:
+                self._process_file(file_path)
+        except UserAbort:
+            self.logger.info("\nAborting operation at user request...")
 
         self._print_summary()
         self._save_manifest()
@@ -301,7 +309,7 @@ class FileOrganizer:
         while True:
             choice = input("  [y]es / [n]o / [a]ll / [q]uit / [c]hange category? ").lower().strip()
             
-            if choice in ('y', 'yes', ''):
+            if choice in ('y', 'yes'):
                 return category
             elif choice in ('n', 'no', 'skip'):
                 return None
@@ -309,8 +317,7 @@ class FileOrganizer:
                 self.interactive = False
                 return category
             elif choice in ('q', 'quit'):
-                print("Aborting...")
-                sys.exit(0)
+                raise UserAbort()
             elif choice in ('c', 'change'):
                 print(f"  Available categories: {', '.join(sorted(self.categories.keys()))}")
                 new_cat = input("  Enter new category: ").strip()
