@@ -1,6 +1,6 @@
-# CSV Report Generator - Technical Documentation
+# CSV/Excel Report Generator - Technical Documentation
 
-A Python script that reads CSV files and generates summary reports with totals, averages, groupings, and filtering capabilities.
+A Python script that reads CSV and Excel files and generates summary reports with totals, averages, groupings, and filtering capabilities.
 
 ## Table of Contents
 
@@ -69,6 +69,17 @@ Transport: 1 item
 | `datetime` | Date parsing and filtering | Date range comparisons |
 | `argparse` | Command-line interface | Filter options, output paths |
 | `typing` | Type hints | Code documentation and IDE support |
+
+### Optional Dependencies
+
+| Module | Purpose | Why We Use It |
+|--------|---------|---------------|
+| `openpyxl` | Excel file parsing | Read .xlsx, .xls, .xlsm, .xlsb files |
+
+**Installing Excel support:**
+```bash
+pip install openpyxl
+```
 
 ### Why the `csv` Module?
 

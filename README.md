@@ -26,7 +26,7 @@ python python-scripts-toolkit/main.py todo add "Learn Python"
 | Project | Description | Key Concepts | Docs |
 |---------|-------------|--------------|------|
 | **File Organizer** | Sort messy folders by file type | `pathlib`, `shutil`, conditionals | [Read More](python-scripts-toolkit/docs/file-organizer.md) |
-| **CSV Reporter** | Generate reports from data | `csv` module, aggregation, filtering | [Read More](python-scripts-toolkit/docs/csv-reporter.md) |
+| **CSV/Excel Reporter** | Generate reports from CSV/Excel data | `csv`, `openpyxl`, aggregation, filtering | [Read More](python-scripts-toolkit/docs/csv-reporter.md) |
 | **Web Scraper** | Extract data from websites | `requests`, `BeautifulSoup`, HTTP | [Read More](python-scripts-toolkit/docs/web-scraper.md) |
 | **Todo Manager** | CLI task management | JSON storage, data modeling | [Read More](python-scripts-toolkit/docs/todo-manager.md) |
 | **Email Reminder** | Send conditional alerts | `smtplib`, scheduling, automation | [Read More](python-scripts-toolkit/docs/email-reminder.md) |
@@ -75,13 +75,22 @@ python python-scripts-toolkit/main.py organize ~/Downloads --min-size 1KB --max-
 
 ---
 
-### 2. CSV Report Generator
+### 2. CSV/Excel Report Generator
 
-Generate summary reports with totals, averages, and groupings from CSV data.
+Generate summary reports with totals, averages, and groupings from CSV or Excel data.
 
 ```bash
-# Basic report
+# Basic report from CSV
 python python-scripts-toolkit/main.py csv expenses.csv
+
+# Report from Excel file (uses first sheet)
+python python-scripts-toolkit/main.py csv data.xlsx
+
+# Excel file with specific sheet
+python python-scripts-toolkit/main.py csv data.xlsx --sheet "Sales Data"
+
+# List available sheets in Excel file
+python python-scripts-toolkit/main.py csv data.xlsx --list-sheets
 
 # Group by category
 python python-scripts-toolkit/main.py csv expenses.csv --group-by category
@@ -109,6 +118,7 @@ python python-scripts-toolkit/main.py csv *.csv --group-by category --export-csv
 ```
 
 **Features:**
+- **Excel support** (.xlsx, .xls, .xlsm, .xlsb) with sheet selection
 - Auto-detects numeric and date columns
 - Calculates sum, average, min, max
 - Group by any column
@@ -116,6 +126,8 @@ python python-scripts-toolkit/main.py csv *.csv --group-by category --export-csv
 - Merge multiple CSV files (append or join)
 - Glob pattern support for file selection
 - Deduplication of rows
+
+**Note:** Excel support requires `pip install openpyxl`
 
 ---
 
@@ -270,7 +282,7 @@ Each project has comprehensive technical documentation explaining concepts, code
 Each project teaches fundamental Python concepts:
 
 1. **File Organizer** → File system operations, conditionals, `pathlib`
-2. **CSV Reporter** → Reading/writing files, `csv` module, data aggregation
+2. **CSV/Excel Reporter** → Reading/writing files, `csv`/`openpyxl` modules, data aggregation
 3. **Web Scraper** → HTTP requests, HTML parsing, error handling
 4. **Todo Manager** → JSON, data modeling, CLI design
 5. **Email Reminder** → Email protocols, environment variables, scheduling
