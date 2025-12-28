@@ -55,6 +55,16 @@ def _get_file_type(path: Path) -> str:
 class CSVReporter:
     """Generates reports from CSV/Excel data with aggregation and filtering."""
 
+    # Available advanced statistics
+    AVAILABLE_STATS = {
+        "median": "Median value",
+        "stdev": "Standard deviation",
+        "variance": "Variance",
+        "p25": "25th percentile (Q1)",
+        "p50": "50th percentile (Q2/Median)",
+        "p75": "75th percentile (Q3)",
+    }
+
     def __init__(self, input_patterns: List[str]):
         self.input_paths = self._resolve_paths(input_patterns)
         self.logger = setup_logger("csv_reporter")
@@ -64,6 +74,9 @@ class CSVReporter:
         self.numeric_columns: List[str] = []
         self.date_column: Optional[str] = None
         self.category_column: Optional[str] = None
+        # Statistics configuration
+        self.full_stats: bool = False
+        self.selected_stats: Optional[List[str]] = None
         
     def _resolve_paths(self, patterns: List[str]) -> List[Path]:
         """Resolve glob patterns to existing file paths."""
