@@ -24,8 +24,28 @@ from utils.helpers import parse_date
 
 
 
+EXCEL_EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.xlsb'}
+CSV_EXTENSIONS = {'.csv', '.tsv', '.txt'}
+
+
+def _get_file_type(path: Path) -> str:
+    """Detect file type by extension.
+
+    Returns:
+        'excel' for Excel files (.xlsx, .xls, .xlsm, .xlsb)
+        'csv' for CSV files (.csv, .tsv, .txt)
+        'unknown' for unrecognized extensions
+    """
+    suffix = path.suffix.lower()
+    if suffix in EXCEL_EXTENSIONS:
+        return 'excel'
+    elif suffix in CSV_EXTENSIONS:
+        return 'csv'
+    return 'unknown'
+
+
 class CSVReporter:
-    """Generates reports from CSV data with aggregation and filtering."""
+    """Generates reports from CSV/Excel data with aggregation and filtering."""
 
     def __init__(self, input_patterns: List[str]):
         self.input_paths = self._resolve_paths(input_patterns)
