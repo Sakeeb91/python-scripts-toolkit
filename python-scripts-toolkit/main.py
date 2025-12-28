@@ -138,6 +138,12 @@ def run_csv(args):
     if not reporter.load(sheet_name=args.sheet):
         sys.exit(1)
 
+    # Configure advanced statistics if requested
+    reporter.configure_stats(
+        full_stats=getattr(args, 'full_stats', False),
+        stats_list=getattr(args, 'stats', None)
+    )
+
     filtered_data = reporter.filter_data(
         filter_column=args.filter_column,
         filter_value=args.filter_value,
@@ -307,6 +313,10 @@ def main():
     csv_parser.add_argument("--date-to", help="End date (YYYY-MM-DD)")
     csv_parser.add_argument("--sheet", "-s", help="Excel sheet name (default: first sheet)")
     csv_parser.add_argument("--list-sheets", action="store_true", help="List available sheets in Excel file")
+    csv_parser.add_argument("--full-stats", action="store_true",
+                            help="Show all advanced statistics (median, std dev, variance, percentiles)")
+    csv_parser.add_argument("--stats", metavar="STATS",
+                            help="Comma-separated list of stats: median,stdev,variance,p25,p50,p75")
 
     # Web Scraper
     scrape_parser = subparsers.add_parser("scrape", help="Scrape websites and save to CSV")
