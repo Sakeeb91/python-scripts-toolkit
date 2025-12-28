@@ -77,7 +77,29 @@ class CSVReporter:
         # Statistics configuration
         self.full_stats: bool = False
         self.selected_stats: Optional[List[str]] = None
-        
+
+    def configure_stats(self, full_stats: bool = False, stats_list: Optional[str] = None) -> None:
+        """Configure which advanced statistics to display in reports.
+
+        Args:
+            full_stats: If True, display all available advanced statistics
+            stats_list: Comma-separated list of specific stats to show
+                        (e.g., "median,stdev,p75")
+        """
+        self.full_stats = full_stats
+        if stats_list:
+            requested = [s.strip().lower() for s in stats_list.split(",")]
+            valid_stats = []
+            for stat in requested:
+                if stat in self.AVAILABLE_STATS:
+                    valid_stats.append(stat)
+                else:
+                    self.logger.warning("Unknown statistic: %s (available: %s)",
+                                       stat, ", ".join(self.AVAILABLE_STATS.keys()))
+            self.selected_stats = valid_stats if valid_stats else None
+        else:
+            self.selected_stats = None
+
     def _resolve_paths(self, patterns: List[str]) -> List[Path]:
         """Resolve glob patterns to existing file paths."""
         seen = set()
