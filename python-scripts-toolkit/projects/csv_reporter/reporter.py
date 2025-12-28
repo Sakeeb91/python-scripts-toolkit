@@ -144,8 +144,40 @@ class CSVReporter:
         wb.close()
         return sheet_names
 
-    def load(self, merge_strategy: str = "append", join_key: Optional[str] = None, dedupe: bool = False) -> bool:
-        """Load and parse the CSV file(s) based on merge strategy."""
+    def _load_single_file(self, path: Path, sheet_name: Optional[str] = None) -> tuple:
+        """Load a single file (CSV or Excel) and return headers and data.
+
+        Args:
+            path: Path to the file
+            sheet_name: Sheet name for Excel files (ignored for CSV)
+
+        Returns:
+            Tuple of (headers, data)
+        """
+        file_type = _get_file_type(path)
+
+        if file_type == 'excel':
+            return self._load_excel(path, sheet_name)
+        else:
+            # Default to CSV loading
+            with open(path, 'r', newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                headers = list(reader.fieldnames or [])
+                data = list(reader)
+            return headers, data
+
+    def load(self, merge_strategy: str = "append", join_key: Optional[str] = None, dedupe: bool = False, sheet_name: Optional[str] = None) -> bool:
+        """Load and parse the CSV/Excel file(s) based on merge strategy.
+
+        Args:
+            merge_strategy: How to combine multiple files ('append' or 'join')
+            join_key: Column name for join strategy
+            dedupe: Remove duplicate rows
+            sheet_name: Sheet name for Excel files (uses first sheet if not specified)
+
+        Returns:
+            True if loading succeeded, False otherwise
+        """
         if not self.input_paths:
             self.logger.error("No input files found.")
             return False
@@ -153,11 +185,8 @@ class CSVReporter:
         try:
             if len(self.input_paths) == 1:
                 # Single file case
-                with open(self.input_paths[0], 'r', newline='', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    self.headers = list(reader.fieldnames or [])
-                    self.all_headers = list(self.headers)
-                    self.data = list(reader)
+                self.headers, self.data = self._load_single_file(self.input_paths[0], sheet_name)
+                self.all_headers = list(self.headers)
                 self.logger.info("Loaded %d rows from %s", len(self.data), self.input_paths[0].name)
             else:
                 # Multiple files case
@@ -165,15 +194,12 @@ class CSVReporter:
                     all_data = []
                     all_unique_headers = set()
                     for path in self.input_paths:
-                        with open(path, 'r', newline='', encoding='utf-8') as f:
-                            reader = csv.DictReader(f)
-                            current_headers = reader.fieldnames or []
-                            all_unique_headers.update(current_headers)
-                            rows = list(reader)
-                            all_data.extend(rows)
-                            self.logger.info("Appended %d rows from %s", len(rows), path.name)
+                        current_headers, rows = self._load_single_file(path, sheet_name)
+                        all_unique_headers.update(current_headers)
+                        all_data.extend(rows)
+                        self.logger.info("Appended %d rows from %s", len(rows), path.name)
                     self.headers = sorted(list(all_unique_headers))
-                    self.all_headers = list(self.headers) # FIX: Initialize all_headers for append
+                    self.all_headers = list(self.headers)
                     self.data = all_data
                     self.logger.info("Total loaded %d rows from %d files using 'append' strategy.", len(self.data), len(self.input_paths))
 
@@ -184,36 +210,33 @@ class CSVReporter:
 
                     # Check if join_key exists in all files
                     for p in self.input_paths:
-                        with open(p, 'r', newline='', encoding='utf-8') as f:
-                            headers = csv.DictReader(f).fieldnames or []
-                            if join_key not in headers:
-                                self.logger.error("Join key '%s' not found in file: %s", join_key, p.name)
-                                return False
+                        file_headers, _ = self._load_single_file(p, sheet_name)
+                        if join_key not in file_headers:
+                            self.logger.error("Join key '%s' not found in file: %s", join_key, p.name)
+                            return False
 
                     joined_data: Dict[str, Dict[str, Any]] = {}
                     all_unique_headers = set()
 
                     for i, path in enumerate(self.input_paths):
-                        with open(path, 'r', newline='', encoding='utf-8') as f:
-                            reader = csv.DictReader(f)
-                            current_headers = reader.fieldnames or []
-                            all_unique_headers.update(current_headers)
-                            for row in reader:
-                                key_value = row.get(join_key)
-                                if key_value:
-                                    if key_value not in joined_data:
-                                        joined_data[key_value] = {join_key: key_value} # Initialize with join_key
-                                    # Prefix columns from subsequent files to avoid conflicts, except for the join_key
-                                    prefix = f"file{i+1}_" if i > 0 else ""
-                                    for header, value in row.items():
-                                        if header != join_key:
-                                            joined_data[key_value][f"{prefix}{header}"] = value
-                                            all_unique_headers.add(f"{prefix}{header}") # Add prefixed header to unique headers
-                                        else:
-                                            joined_data[key_value][header] = value # Keep join_key as is
+                        current_headers, rows = self._load_single_file(path, sheet_name)
+                        all_unique_headers.update(current_headers)
+                        for row in rows:
+                            key_value = row.get(join_key)
+                            if key_value:
+                                if key_value not in joined_data:
+                                    joined_data[key_value] = {join_key: key_value}
+                                # Prefix columns from subsequent files to avoid conflicts
+                                prefix = f"file{i+1}_" if i > 0 else ""
+                                for header, value in row.items():
+                                    if header != join_key:
+                                        joined_data[key_value][f"{prefix}{header}"] = value
+                                        all_unique_headers.add(f"{prefix}{header}")
+                                    else:
+                                        joined_data[key_value][header] = value
                     self.data = list(joined_data.values())
-                    self.headers = sorted(list(all_unique_headers)) # FIX: Set headers to all unique headers
-                    self.all_headers = list(self.headers) # FIX: Initialize all_headers for join
+                    self.headers = sorted(list(all_unique_headers))
+                    self.all_headers = list(self.headers)
                     self.logger.info("Total loaded %d rows from %d files using 'join' strategy on key '%s'.", len(self.data), len(self.input_paths), join_key)
 
             # Deduplicate rows if requested
