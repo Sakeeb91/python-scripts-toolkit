@@ -76,6 +76,74 @@ class CSVReporter:
                     files.append(Path(f))
         return files
 
+    def _load_excel(self, path: Path, sheet_name: Optional[str] = None) -> tuple:
+        """Load data from an Excel file.
+
+        Args:
+            path: Path to the Excel file
+            sheet_name: Name of the sheet to load (default: first sheet)
+
+        Returns:
+            Tuple of (headers, data) where headers is a list of column names
+            and data is a list of dicts representing rows.
+
+        Raises:
+            ImportError: If openpyxl is not installed
+            ValueError: If the specified sheet doesn't exist
+        """
+        from openpyxl import load_workbook
+
+        wb = load_workbook(path, read_only=True, data_only=True)
+
+        # Select the sheet
+        if sheet_name:
+            if sheet_name not in wb.sheetnames:
+                raise ValueError(f"Sheet '{sheet_name}' not found. Available: {', '.join(wb.sheetnames)}")
+            ws = wb[sheet_name]
+        else:
+            ws = wb.active
+
+        # Read headers from first row
+        rows = ws.iter_rows(values_only=True)
+        try:
+            header_row = next(rows)
+        except StopIteration:
+            return [], []
+
+        headers = [str(h) if h is not None else f"Column_{i}" for i, h in enumerate(header_row)]
+
+        # Read data rows
+        data = []
+        for row in rows:
+            row_dict = {}
+            for i, value in enumerate(row):
+                if i < len(headers):
+                    # Convert None to empty string for consistency with CSV behavior
+                    row_dict[headers[i]] = str(value) if value is not None else ""
+            data.append(row_dict)
+
+        wb.close()
+        return headers, data
+
+    def get_sheet_names(self, path: Path) -> List[str]:
+        """Get list of sheet names from an Excel file.
+
+        Args:
+            path: Path to the Excel file
+
+        Returns:
+            List of sheet names
+
+        Raises:
+            ImportError: If openpyxl is not installed
+        """
+        from openpyxl import load_workbook
+
+        wb = load_workbook(path, read_only=True)
+        sheet_names = wb.sheetnames
+        wb.close()
+        return sheet_names
+
     def load(self, merge_strategy: str = "append", join_key: Optional[str] = None, dedupe: bool = False) -> bool:
         """Load and parse the CSV file(s) based on merge strategy."""
         if not self.input_paths:
