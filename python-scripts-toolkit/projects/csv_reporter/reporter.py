@@ -322,6 +322,54 @@ class CSVReporter:
         except ValueError:
             return 0.0
 
+    def _compute_advanced_stats(self, values: List[float]) -> Dict[str, float]:
+        """Compute advanced statistics for a list of numeric values.
+
+        Args:
+            values: List of float values to analyze
+
+        Returns:
+            Dictionary with calculated statistics (median, stdev, variance, percentiles)
+        """
+        result = {}
+
+        if not values:
+            return result
+
+        # Median - works with any number of values
+        result["median"] = statistics.median(values)
+
+        # Standard deviation and variance require at least 2 values
+        if len(values) >= 2:
+            try:
+                result["stdev"] = statistics.stdev(values)
+                result["variance"] = statistics.variance(values)
+            except statistics.StatisticsError:
+                result["stdev"] = 0.0
+                result["variance"] = 0.0
+        else:
+            result["stdev"] = 0.0
+            result["variance"] = 0.0
+
+        # Percentiles require at least 4 values for quartiles
+        if len(values) >= 4:
+            try:
+                quantiles = statistics.quantiles(values, n=4)
+                result["p25"] = quantiles[0]
+                result["p50"] = quantiles[1]
+                result["p75"] = quantiles[2]
+            except statistics.StatisticsError:
+                result["p25"] = result["median"]
+                result["p50"] = result["median"]
+                result["p75"] = result["median"]
+        else:
+            # For small datasets, use median for all percentiles
+            result["p25"] = result["median"]
+            result["p50"] = result["median"]
+            result["p75"] = result["median"]
+
+        return result
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
