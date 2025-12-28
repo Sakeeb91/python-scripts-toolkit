@@ -1,11 +1,16 @@
 """
 CSV Report Generator - Reads CSV files and generates summary reports.
 
+Supports advanced statistics including median, standard deviation, variance,
+and percentiles (P25, P50, P75) using Python's statistics module.
+
 Usage:
     python -m projects.csv_reporter.reporter input.csv
     python -m projects.csv_reporter.reporter input.csv --output report.txt
     python -m projects.csv_reporter.reporter input.csv --filter-column category --filter-value "Food"
     python -m projects.csv_reporter.reporter input.csv --date-from 2024-01-01 --date-to 2024-12-31
+    python -m projects.csv_reporter.reporter input.csv --full-stats
+    python -m projects.csv_reporter.reporter input.csv --stats median,stdev,p75
 """
 import argparse
 import csv
