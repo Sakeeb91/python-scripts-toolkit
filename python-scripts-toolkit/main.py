@@ -49,9 +49,9 @@ Available Projects:
               Example: python main.py organize ~/Downloads --dry-run
               Undo:    python main.py organize --undo
 
-  csv         CSV Report Generator
-              Generate summary reports from CSV data
-              Example: python main.py csv data.csv --group-by category
+  csv         CSV/Excel Report Generator
+              Generate summary reports from CSV or Excel data
+              Example: python main.py csv data.xlsx --sheet "Sales"
 
   scrape      Web Scraper + Saver
               Fetch web pages and save structured data to CSV
@@ -115,10 +115,27 @@ def run_organize(args):
 
 def run_csv(args):
     """Run the CSV reporter project."""
-    from projects.csv_reporter.reporter import CSVReporter
+    from projects.csv_reporter.reporter import CSVReporter, _get_file_type
 
-    reporter = CSVReporter(args.input)
-    if not reporter.load():
+    reporter = CSVReporter([str(args.input)])
+
+    # Handle --list-sheets
+    if args.list_sheets:
+        for path in reporter.input_paths:
+            if _get_file_type(path) == 'excel':
+                try:
+                    sheets = reporter.get_sheet_names(path)
+                    print(f"\n{path.name}:")
+                    for i, sheet in enumerate(sheets, 1):
+                        print(f"  {i}. {sheet}")
+                except ImportError as e:
+                    print(f"Error: {e}")
+                    sys.exit(1)
+            else:
+                print(f"\n{path.name}: Not an Excel file")
+        return
+
+    if not reporter.load(sheet_name=args.sheet):
         sys.exit(1)
 
     filtered_data = reporter.filter_data(
@@ -280,14 +297,16 @@ def main():
     org_parser.add_argument("--manifest", "-m", type=Path, help="Specific manifest file for undo")
 
     # CSV Reporter
-    csv_parser = subparsers.add_parser("csv", help="Generate reports from CSV data")
-    csv_parser.add_argument("input", type=Path, help="Input CSV file")
+    csv_parser = subparsers.add_parser("csv", help="Generate reports from CSV/Excel data")
+    csv_parser.add_argument("input", type=Path, help="Input CSV/Excel file")
     csv_parser.add_argument("--output", "-o", type=Path, help="Output file")
     csv_parser.add_argument("--group-by", "-g", help="Column to group by")
     csv_parser.add_argument("--filter-column", "-fc", help="Column to filter on")
     csv_parser.add_argument("--filter-value", "-fv", help="Value to filter for")
     csv_parser.add_argument("--date-from", help="Start date (YYYY-MM-DD)")
     csv_parser.add_argument("--date-to", help="End date (YYYY-MM-DD)")
+    csv_parser.add_argument("--sheet", "-s", help="Excel sheet name (default: first sheet)")
+    csv_parser.add_argument("--list-sheets", action="store_true", help="List available sheets in Excel file")
 
     # Web Scraper
     scrape_parser = subparsers.add_parser("scrape", help="Scrape websites and save to CSV")
