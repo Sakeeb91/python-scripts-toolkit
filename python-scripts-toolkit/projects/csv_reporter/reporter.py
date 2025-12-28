@@ -484,6 +484,8 @@ Examples:
   reporter.py data.xlsx
   # Excel file with specific sheet
   reporter.py data.xlsx --sheet "Sales Data"
+  # List available sheets in Excel file
+  reporter.py data.xlsx --list-sheets
   # Multiple CSV files (append rows)
   reporter.py jan.csv feb.csv mar.csv
   # Using glob pattern
@@ -515,9 +517,27 @@ Examples:
     parser.add_argument("--join-key", help="Required for join")
     parser.add_argument("--dedupe", action="store_true", help="Remove duplicate rows")
     parser.add_argument("--sheet", "-s", help="Excel sheet name (default: first sheet)")
+    parser.add_argument("--list-sheets", action="store_true", help="List available sheets in Excel file")
     args = parser.parse_args()
 
     reporter = CSVReporter(args.inputs)
+
+    # Handle --list-sheets
+    if args.list_sheets:
+        for path in reporter.input_paths:
+            if _get_file_type(path) == 'excel':
+                try:
+                    sheets = reporter.get_sheet_names(path)
+                    print(f"\n{path.name}:")
+                    for i, sheet in enumerate(sheets, 1):
+                        print(f"  {i}. {sheet}")
+                except ImportError as e:
+                    print(f"Error: {e}")
+                    sys.exit(1)
+            else:
+                print(f"\n{path.name}: Not an Excel file")
+        sys.exit(0)
+
     if not reporter.load(args.merge, args.join_key, args.dedupe, args.sheet):
         sys.exit(1)
 
