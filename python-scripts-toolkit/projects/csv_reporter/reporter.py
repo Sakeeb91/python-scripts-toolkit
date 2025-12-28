@@ -474,8 +474,34 @@ class CSVReporter:
                     lines.append(f"\n{col}:")
                     lines.append(f"  Total:   {sum(values):,.2f}")
                     lines.append(f"  Average: {sum(values)/len(values):,.2f}")
+
+                    # Add advanced statistics if configured
+                    if self.full_stats or self.selected_stats:
+                        advanced = self._compute_advanced_stats(values)
+                        stats_to_show = self.selected_stats or list(self.AVAILABLE_STATS.keys())
+
+                        if "median" in stats_to_show and "median" in advanced:
+                            lines.append(f"  Median:  {advanced['median']:,.2f}")
+                        if "stdev" in stats_to_show and "stdev" in advanced:
+                            lines.append(f"  Std Dev: {advanced['stdev']:,.2f}")
+                        if "variance" in stats_to_show and "variance" in advanced:
+                            lines.append(f"  Variance:{advanced['variance']:,.2f}")
+
                     lines.append(f"  Min:     {min(values):,.2f}")
                     lines.append(f"  Max:     {max(values):,.2f}")
+
+                    # Add percentiles after min/max if configured
+                    if self.full_stats or self.selected_stats:
+                        advanced = self._compute_advanced_stats(values)
+                        stats_to_show = self.selected_stats or list(self.AVAILABLE_STATS.keys())
+
+                        if "p25" in stats_to_show and "p25" in advanced:
+                            lines.append(f"  P25:     {advanced['p25']:,.2f}")
+                        if "p50" in stats_to_show and "p50" in advanced:
+                            lines.append(f"  P50:     {advanced['p50']:,.2f}")
+                        if "p75" in stats_to_show and "p75" in advanced:
+                            lines.append(f"  P75:     {advanced['p75']:,.2f}")
+
                     lines.append(f"  Count:   {len([v for v in values if v != 0])}")
 
         # Group by analysis
