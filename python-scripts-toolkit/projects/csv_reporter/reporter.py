@@ -474,12 +474,16 @@ class CSVReporter:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate reports from CSV data",
+        description="Generate reports from CSV/Excel data",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Basic single-file report
   reporter.py expenses.csv
+  # Excel file (uses first sheet)
+  reporter.py data.xlsx
+  # Excel file with specific sheet
+  reporter.py data.xlsx --sheet "Sales Data"
   # Multiple CSV files (append rows)
   reporter.py jan.csv feb.csv mar.csv
   # Using glob pattern
@@ -499,7 +503,7 @@ Examples:
   # Remove duplicate rows
   reporter.py *.csv --merge append --dedupe"""
     )
-    parser.add_argument("inputs", nargs="+", help="CSV files or glob patterns")
+    parser.add_argument("inputs", nargs="+", help="CSV/Excel files or glob patterns")
     parser.add_argument("--output", "-o", type=Path, help="Output file for report")
     parser.add_argument("--group-by", "-g", help="Column to group by")
     parser.add_argument("--filter-column", "-fc", help="Column to filter on")
@@ -510,10 +514,11 @@ Examples:
     parser.add_argument("--merge", choices=["append", "join"], default="append")
     parser.add_argument("--join-key", help="Required for join")
     parser.add_argument("--dedupe", action="store_true", help="Remove duplicate rows")
+    parser.add_argument("--sheet", "-s", help="Excel sheet name (default: first sheet)")
     args = parser.parse_args()
 
     reporter = CSVReporter(args.inputs)
-    if not reporter.load(args.merge, args.join_key, args.dedupe):
+    if not reporter.load(args.merge, args.join_key, args.dedupe, args.sheet):
         sys.exit(1)
 
     # Filter data
