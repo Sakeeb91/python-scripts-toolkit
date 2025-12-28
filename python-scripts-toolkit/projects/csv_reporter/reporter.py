@@ -613,7 +613,11 @@ Examples:
   # Export grouped summary as CSV
   reporter.py *.csv --group-by category --export-csv summary.csv
   # Remove duplicate rows
-  reporter.py *.csv --merge append --dedupe"""
+  reporter.py *.csv --merge append --dedupe
+  # Show all advanced statistics (median, std dev, variance, percentiles)
+  reporter.py expenses.csv --full-stats
+  # Show specific statistics only
+  reporter.py expenses.csv --stats median,stdev,p75"""
     )
     parser.add_argument("inputs", nargs="+", help="CSV/Excel files or glob patterns")
     parser.add_argument("--output", "-o", type=Path, help="Output file for report")
@@ -628,6 +632,10 @@ Examples:
     parser.add_argument("--dedupe", action="store_true", help="Remove duplicate rows")
     parser.add_argument("--sheet", "-s", help="Excel sheet name (default: first sheet)")
     parser.add_argument("--list-sheets", action="store_true", help="List available sheets in Excel file")
+    parser.add_argument("--full-stats", action="store_true",
+                        help="Show all advanced statistics (median, std dev, variance, percentiles)")
+    parser.add_argument("--stats", metavar="STATS",
+                        help="Comma-separated list of stats to show (median,stdev,variance,p25,p50,p75)")
     args = parser.parse_args()
 
     reporter = CSVReporter(args.inputs)
@@ -650,6 +658,9 @@ Examples:
 
     if not reporter.load(args.merge, args.join_key, args.dedupe, args.sheet):
         sys.exit(1)
+
+    # Configure advanced statistics
+    reporter.configure_stats(full_stats=args.full_stats, stats_list=args.stats)
 
     # Filter data
     filtered_data = reporter.filter_data(
