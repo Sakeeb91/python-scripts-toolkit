@@ -27,6 +27,13 @@ from utils.helpers import parse_date
 EXCEL_EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.xlsb'}
 CSV_EXTENSIONS = {'.csv', '.tsv', '.txt'}
 
+# Check for openpyxl availability
+try:
+    import openpyxl
+    HAS_OPENPYXL = True
+except ImportError:
+    HAS_OPENPYXL = False
+
 
 def _get_file_type(path: Path) -> str:
     """Detect file type by extension.
@@ -91,6 +98,13 @@ class CSVReporter:
             ImportError: If openpyxl is not installed
             ValueError: If the specified sheet doesn't exist
         """
+        if not HAS_OPENPYXL:
+            raise ImportError(
+                f"Excel file support requires openpyxl. Install with:\n"
+                f"  pip install openpyxl\n"
+                f"Or convert '{path.name}' to CSV format."
+            )
+
         from openpyxl import load_workbook
 
         wb = load_workbook(path, read_only=True, data_only=True)
@@ -137,6 +151,12 @@ class CSVReporter:
         Raises:
             ImportError: If openpyxl is not installed
         """
+        if not HAS_OPENPYXL:
+            raise ImportError(
+                f"Excel file support requires openpyxl. Install with:\n"
+                f"  pip install openpyxl"
+            )
+
         from openpyxl import load_workbook
 
         wb = load_workbook(path, read_only=True)
