@@ -1,6 +1,6 @@
 # CSV/Excel Report Generator - Technical Documentation
 
-A Python script that reads CSV and Excel files and generates summary reports with totals, averages, groupings, and filtering capabilities.
+A Python script that reads CSV and Excel files and generates summary reports with totals, averages, advanced statistics, groupings, and filtering capabilities.
 
 ## Table of Contents
 
@@ -23,7 +23,8 @@ Working with data in CSV format is common in many fields—expense tracking, tim
 2. **Detecting** column types (numeric, date, category)
 3. **Filtering** by value or date range
 4. **Aggregating** numeric columns (sum, average, min, max)
-5. **Grouping** data by any column
+5. **Advanced statistics** (median, standard deviation, variance, percentiles)
+6. **Grouping** data by any column
 
 ### Example Workflow
 
@@ -54,6 +55,24 @@ Food: 2 items
 Transport: 1 item
   amount: 24.00
 ════════════════════════════════════════
+
+Output with --full-stats:
+════════════════════════════════════════
+NUMERIC SUMMARIES
+────────────────────────────────────────
+amount:
+  Total:   171.80
+  Average: 57.27
+  Median:  62.30
+  Std Dev: 31.12
+  Variance:968.45
+  Min:     24.00
+  Max:     85.50
+  P25:     43.15
+  P50:     62.30
+  P75:     73.90
+  Count:   3
+════════════════════════════════════════
 ```
 
 ---
@@ -65,6 +84,7 @@ Transport: 1 item
 | Module | Purpose | Why We Use It |
 |--------|---------|---------------|
 | `csv` | CSV file parsing | Handles quoting, delimiters, edge cases |
+| `statistics` | Advanced statistics | Median, stdev, variance, percentiles |
 | `collections.defaultdict` | Grouped aggregations | Auto-initializing nested structures |
 | `datetime` | Date parsing and filtering | Date range comparisons |
 | `argparse` | Command-line interface | Filter options, output paths |
@@ -277,7 +297,63 @@ def generate_report(self, data=None, group_by=None) -> str:
 - `{value:,.2f}` formats as `1,234.56` (comma separator, 2 decimals)
 - `sum(values)/len(values)` for average (could use `statistics.mean()`)
 
-### 6. Group By Analysis
+### 6. Advanced Statistics
+
+The reporter supports advanced statistical calculations using Python's `statistics` module:
+
+```python
+def _compute_advanced_stats(self, values: List[float]) -> Dict[str, float]:
+    """Compute advanced statistics for a list of numeric values."""
+    result = {}
+
+    if not values:
+        return result
+
+    # Median - works with any number of values
+    result["median"] = statistics.median(values)
+
+    # Standard deviation and variance require at least 2 values
+    if len(values) >= 2:
+        result["stdev"] = statistics.stdev(values)
+        result["variance"] = statistics.variance(values)
+    else:
+        result["stdev"] = 0.0
+        result["variance"] = 0.0
+
+    # Percentiles require at least 4 values for quartiles
+    if len(values) >= 4:
+        quantiles = statistics.quantiles(values, n=4)
+        result["p25"] = quantiles[0]  # 25th percentile
+        result["p50"] = quantiles[1]  # 50th percentile
+        result["p75"] = quantiles[2]  # 75th percentile
+    else:
+        # For small datasets, use median for all percentiles
+        result["p25"] = result["p50"] = result["p75"] = result["median"]
+
+    return result
+```
+
+**Available statistics:**
+
+| Stat | Description | Minimum Data Points |
+|------|-------------|---------------------|
+| `median` | Middle value of sorted data | 1 |
+| `stdev` | Sample standard deviation | 2 |
+| `variance` | Sample variance | 2 |
+| `p25` | 25th percentile (Q1) | 4 |
+| `p50` | 50th percentile (Q2/Median) | 4 |
+| `p75` | 75th percentile (Q3) | 4 |
+
+**Usage:**
+```bash
+# Show all advanced statistics
+python main.py csv data.csv --full-stats
+
+# Show specific statistics only
+python main.py csv data.csv --stats median,stdev,p75
+```
+
+### 7. Group By Analysis
 
 ```python
 # Group by analysis
@@ -548,6 +624,7 @@ The CSV Reporter teaches these core Python concepts:
 |---------|---------------|
 | `csv` module | Safe CSV parsing |
 | `DictReader` | Row-as-dictionary access |
+| `statistics` module | Median, stdev, variance, percentiles |
 | Type detection | Sampling and validation |
 | List comprehensions | Filtering and transformation |
 | `defaultdict` | Grouping operations |
