@@ -40,6 +40,14 @@ try:
 except ImportError:
     HAS_OPENPYXL = False
 
+# Check for matplotlib availability
+try:
+    import matplotlib.pyplot as plt
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+
+
 
 def _get_file_type(path: Path) -> str:
     """Detect file type by extension.
@@ -585,6 +593,190 @@ class CSVReporter:
         except Exception as e:
             self.logger.error("Error writing CSV: %s", e)
             return False
+
+    def generate_chart(
+        self,
+        data: Optional[List[Dict[str, Any]]] = None,
+        chart_type: str = "bar",
+        output_file: Optional[Path] = None,
+        group_by: Optional[str] = None,
+        value_column: Optional[str] = None
+    ) -> bool:
+        """Generate a visualization chart from the data.
+
+        Args:
+            data: Filtered data list
+            chart_type: Type of chart ('bar', 'pie', 'line', 'horizontal-bar')
+            output_file: Path to save the chart
+            group_by: Column to group data by (X-axis/Labels)
+            value_column: Column for values (Y-axis/Sizes)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not HAS_MATPLOTLIB:
+            self.logger.error("matplotlib not installed. Run: pip install matplotlib")
+            return False
+
+        if not output_file:
+            output_file = Path("chart.png")
+
+        data = data or self.data
+        if not data:
+            self.logger.error("No data to chart")
+            return False
+
+        # Determine columns
+        label_col = group_by or self.category_column
+        if not label_col:
+            # Try to find a non-numeric column that isn't date
+            candidates = [c for c in self.headers 
+                         if c not in self.numeric_columns and c != self.date_column]
+            if candidates:
+                label_col = candidates[0]
+            else:
+                label_col = self.headers[0] # Fallback
+
+        val_col = value_column
+        if not val_col:
+            if self.numeric_columns:
+                val_col = self.numeric_columns[0]
+            else:
+                # If no numeric columns, we'll use counts
+                val_col = None
+
+        # Prepare data
+        try:
+            plt.figure(figsize=(10, 6))
+            
+            if chart_type == "pie":
+                self._create_pie_chart(data, label_col, val_col)
+            elif chart_type == "line":
+                self._create_line_chart(data, label_col, val_col)
+            elif chart_type == "horizontal-bar":
+                self._create_bar_chart(data, label_col, val_col, horizontal=True)
+            else:
+                self._create_bar_chart(data, label_col, val_col, horizontal=False)
+
+            plt.tight_layout()
+            plt.savefig(output_file)
+            plt.close()
+            self.logger.info("Chart saved to: %s", output_file)
+            return True
+        except Exception as e:
+            self.logger.error("Error generating chart: %s", e)
+            return False
+
+    def _create_bar_chart(self, data: List[Dict[str, Any]], label_col: str, 
+                         val_col: Optional[str], horizontal: bool = False):
+        """Create a bar chart."""
+        # Aggregate data
+        groups = defaultdict(float)
+        counts = defaultdict(int)
+        
+        for row in data:
+            key = str(row.get(label_col, "Unknown"))
+            counts[key] += 1
+            if val_col:
+                groups[key] += self._parse_numeric(row.get(val_col, ""))
+
+        # Prepare lists
+        labels = sorted(groups.keys()) if val_col else sorted(counts.keys())
+        values = [groups[l] for l in labels] if val_col else [counts[l] for l in labels]
+
+        # Limit to top 20 to avoid overcrowding
+        if len(labels) > 20:
+            # Sort by value and take top 20
+            zipped = sorted(zip(labels, values), key=lambda x: x[1], reverse=True)[:20]
+            labels, values = zip(*zipped)
+            plt.title(f"Top 20 by {label_col}")
+
+        if horizontal:
+            plt.barh(labels, values)
+            plt.xlabel(val_col or "Count")
+            plt.ylabel(label_col)
+        else:
+            plt.bar(labels, values)
+            plt.xlabel(label_col)
+            plt.ylabel(val_col or "Count")
+            plt.xticks(rotation=45, ha='right')
+
+        title = f"{val_col or 'Count'} by {label_col}"
+        if not plt.gca().get_title():
+            plt.title(title)
+
+    def _create_pie_chart(self, data: List[Dict[str, Any]], label_col: str, val_col: Optional[str]):
+        """Create a pie chart."""
+        groups = defaultdict(float)
+        counts = defaultdict(int)
+
+        for row in data:
+            key = str(row.get(label_col, "Unknown"))
+            counts[key] += 1
+            if val_col:
+                groups[key] += self._parse_numeric(row.get(val_col, ""))
+
+        labels = list(groups.keys()) if val_col else list(counts.keys())
+        values = [groups[l] for l in labels] if val_col else [counts[l] for l in labels]
+
+        # Group small slices into "Other"
+        total = sum(values)
+        if total > 0:
+            new_labels = []
+            new_values = []
+            other_val = 0
+            
+            for l, v in zip(labels, values):
+                if v / total < 0.02: # Less than 2%
+                    other_val += v
+                else:
+                    new_labels.append(l)
+                    new_values.append(v)
+            
+            if other_val > 0:
+                new_labels.append("Other")
+                new_values.append(other_val)
+            
+            labels = new_labels
+            values = new_values
+
+        plt.pie(values, labels=labels, autopct='%1.1f%%', startangle=90)
+        plt.title(f"{val_col or 'Count'} distribution by {label_col}")
+
+    def _create_line_chart(self, data: List[Dict[str, Any]], label_col: str, val_col: Optional[str]):
+        """Create a line chart."""
+        # For line charts, we assume label_col is time/sequence-like
+        # We need to sort by it.
+        
+        # Try to parse as dates first if it looks like the date column
+        is_date = label_col == self.date_column or "date" in label_col.lower()
+        
+        xy_pairs = []
+        for row in data:
+            x_val = row.get(label_col, "")
+            y_val = self._parse_numeric(row.get(val_col, "")) if val_col else 1
+            
+            if is_date:
+                try:
+                    x_parsed = parse_date(x_val)
+                    xy_pairs.append((x_parsed, y_val))
+                except ValueError:
+                    xy_pairs.append((x_val, y_val))
+            else:
+                xy_pairs.append((x_val, y_val))
+
+        # Sort by X
+        xy_pairs.sort(key=lambda x: x[0] if x[0] is not None else "")
+        
+        x = [p[0] for p in xy_pairs]
+        y = [p[1] for p in xy_pairs]
+
+        plt.plot(x, y, marker='o')
+        plt.xlabel(label_col)
+        plt.ylabel(val_col or "Count")
+        plt.title(f"{val_col or 'Count'} over {label_col}")
+        plt.grid(True)
+        plt.xticks(rotation=45)
 
 
 def main():

@@ -160,6 +160,16 @@ def run_csv(args):
     else:
         print(report)
 
+    # Generate chart if requested
+    if args.chart:
+        reporter.generate_chart(
+            data=filtered_data,
+            chart_type=args.chart_type,
+            output_file=args.chart_output,
+            group_by=args.group_by,
+            value_column=args.chart_column
+        )
+
 
 def run_scrape(args):
     """Run the web scraper project."""
@@ -317,6 +327,13 @@ def main():
                             help="Show all advanced statistics (median, std dev, variance, percentiles)")
     csv_parser.add_argument("--stats", metavar="STATS",
                             help="Comma-separated list of stats: median,stdev,variance,p25,p50,p75")
+    
+    # Chart options
+    csv_parser.add_argument("--chart", action="store_true", help="Generate a visualization chart")
+    csv_parser.add_argument("--chart-type", choices=["bar", "pie", "line", "horizontal-bar"], 
+                            default="bar", help="Type of chart to generate")
+    csv_parser.add_argument("--chart-output", type=Path, help="Output file for chart (e.g. chart.png)")
+    csv_parser.add_argument("--chart-column", help="Column to use for chart values")
 
     # Web Scraper
     scrape_parser = subparsers.add_parser("scrape", help="Scrape websites and save to CSV")

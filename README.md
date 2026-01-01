@@ -115,10 +115,16 @@ python python-scripts-toolkit/main.py csv *.csv --merge append --dedupe
 
 # Export grouped summary as CSV
 python python-scripts-toolkit/main.py csv *.csv --group-by category --export-csv summary.csv
+
+# Generate charts (requires matplotlib)
+python python-scripts-toolkit/main.py csv expenses.csv --group-by category --chart
+python python-scripts-toolkit/main.py csv expenses.csv --chart --chart-type pie --chart-output expenses.png
+python python-scripts-toolkit/main.py csv sales.csv --chart-type line --chart-column revenue
 ```
 
 **Features:**
 - **Excel support** (.xlsx, .xls, .xlsm, .xlsb) with sheet selection
+- **Chart generation** (bar, pie, line, horizontal-bar)
 - Auto-detects numeric and date columns
 - Calculates sum, average, min, max
 - Group by any column
@@ -127,7 +133,7 @@ python python-scripts-toolkit/main.py csv *.csv --group-by category --export-csv
 - Glob pattern support for file selection
 - Deduplication of rows
 
-**Note:** Excel support requires `pip install openpyxl`
+**Note:** Excel support requires `pip install openpyxl`. Chart support requires `pip install matplotlib`.
 
 ---
 
@@ -308,7 +314,7 @@ MIT License - Feel free to use, modify, and share.
 Contributions welcome! Each project can be extended:
 
 - **File Organizer:** Add undo functionality, duplicate detection
-- **CSV Reporter:** Add charts, Excel export
+- **CSV Reporter:** Excel export
 - **Web Scraper:** Add more presets, proxy support
 - **Todo Manager:** Add tags, recurring tasks
 - **Email Reminder:** Add Discord/Slack webhooks
