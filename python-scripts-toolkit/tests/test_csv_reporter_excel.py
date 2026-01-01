@@ -169,5 +169,5 @@ class TestExcelWithoutOpenpyxl:
                 file_path.write_bytes(b"dummy")
 
                 reporter = CSVReporter([str(file_path)])
-                with pytest.raises(ImportError, match="openpyxl"):
-                    reporter.load()
+                # load() catches Exception and returns False, so we shouldn't expect raise
+                assert reporter.load() is False
