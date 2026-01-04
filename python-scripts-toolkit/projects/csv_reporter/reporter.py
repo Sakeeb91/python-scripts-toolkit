@@ -1465,6 +1465,8 @@ Examples:
                         help="Show all advanced statistics (median, std dev, variance, percentiles)")
     parser.add_argument("--stats", metavar="STATS",
                         help="Comma-separated list of stats to show (median,stdev,variance,p25,p50,p75)")
+    parser.add_argument("--format", "-f", choices=["text", "json", "markdown", "html"], default="text",
+                        help="Output format: text (default), json, markdown, html")
     parser.add_argument("--chart", action="store_true",
                         help="Generate a chart alongside the text report")
     parser.add_argument("--chart-type", choices=["bar", "hbar", "pie", "line"], default="bar",
@@ -1507,8 +1509,15 @@ Examples:
         date_to=args.date_to
     )
 
-    # Generate report
-    report = reporter.generate_report(filtered_data, group_by=args.group_by)
+    # Generate report with specified format
+    format_map = {
+        "text": OutputFormat.TEXT,
+        "json": OutputFormat.JSON,
+        "markdown": OutputFormat.MARKDOWN,
+        "html": OutputFormat.HTML,
+    }
+    output_format = format_map.get(args.format, OutputFormat.TEXT)
+    report = reporter.generate_report(filtered_data, group_by=args.group_by, output_format=output_format)
 
     # Output
     if args.output:
