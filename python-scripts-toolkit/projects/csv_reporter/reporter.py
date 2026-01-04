@@ -1256,9 +1256,28 @@ class CSVReporter:
     def generate_report(
         self,
         data: Optional[List[Dict[str, Any]]] = None,
-        group_by: Optional[str] = None
+        group_by: Optional[str] = None,
+        output_format: OutputFormat = OutputFormat.TEXT
     ) -> str:
-        """Generate a summary report."""
+        """Generate a summary report in the specified format.
+
+        Args:
+            data: Data rows to include in report (uses self.data if None)
+            group_by: Optional column name to group data by
+            output_format: Output format (TEXT, JSON, MARKDOWN, HTML)
+
+        Returns:
+            Formatted report string in the requested format.
+        """
+        # Dispatch to format-specific methods
+        if output_format == OutputFormat.JSON:
+            return self.generate_json_report(data, group_by)
+        elif output_format == OutputFormat.MARKDOWN:
+            return self.generate_markdown_report(data, group_by)
+        elif output_format == OutputFormat.HTML:
+            return self.generate_html_report(data, group_by)
+
+        # Default: TEXT format (original implementation)
         data = data or self.data
 
         lines = [
