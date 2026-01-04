@@ -20,6 +20,8 @@ from collections import defaultdict
 from glob import glob
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+from enum import Enum
+import json
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -49,6 +51,14 @@ try:
 except ImportError:
     HAS_MATPLOTLIB = False
     plt = None
+
+
+class OutputFormat(Enum):
+    """Supported output formats for reports."""
+    TEXT = "text"
+    JSON = "json"
+    MARKDOWN = "markdown"
+    HTML = "html"
 
 
 def _get_file_type(path: Path) -> str:
