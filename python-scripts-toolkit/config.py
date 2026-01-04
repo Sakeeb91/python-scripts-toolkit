@@ -47,6 +47,10 @@ WEB_SCRAPER_CONFIG = {
     "timeout": 10,
     "retry_attempts": 3,
     "retry_delay": 2,
+    # Rate limiting settings
+    "delay": 0,              # Fixed delay between requests (seconds)
+    "random_delay": None,    # Random delay range tuple (min, max) in seconds
+    "respect_rate_limits": False,  # Parse and respect server rate limit headers
 }
 
 # Todo Manager settings
