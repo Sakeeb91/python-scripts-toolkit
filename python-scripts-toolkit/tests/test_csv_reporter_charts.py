@@ -153,3 +153,150 @@ class TestChartConstants:
         required_keys = ["figsize", "dpi", "bar_color", "pie_cmap", "line_color"]
         for key in required_keys:
             assert key in CSVReporter.CHART_DEFAULTS
+
+
+@pytest.mark.skipif(not HAS_MATPLOTLIB, reason="matplotlib not installed")
+class TestGenerateChart:
+    """Tests for chart generation methods (requires matplotlib)."""
+
+    def test_generate_bar_chart(self, temp_csv_with_categories, tmp_path):
+        """Test bar chart generation."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        output_path = tmp_path / "test_bar.png"
+        result = reporter.generate_chart(
+            chart_type="bar",
+            output_path=output_path,
+            group_by="category"
+        )
+
+        assert result is not None
+        assert output_path.exists()
+        assert output_path.stat().st_size > 0
+
+    def test_generate_horizontal_bar_chart(self, temp_csv_with_categories, tmp_path):
+        """Test horizontal bar chart generation."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        output_path = tmp_path / "test_hbar.png"
+        result = reporter.generate_chart(
+            chart_type="hbar",
+            output_path=output_path,
+            group_by="category"
+        )
+
+        assert result is not None
+        assert output_path.exists()
+
+    def test_generate_pie_chart(self, temp_csv_with_categories, tmp_path):
+        """Test pie chart generation."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        output_path = tmp_path / "test_pie.png"
+        result = reporter.generate_chart(
+            chart_type="pie",
+            output_path=output_path,
+            group_by="category"
+        )
+
+        assert result is not None
+        assert output_path.exists()
+
+    def test_generate_line_chart(self, temp_csv_with_categories, tmp_path):
+        """Test line chart generation."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        output_path = tmp_path / "test_line.png"
+        result = reporter.generate_chart(
+            chart_type="line",
+            output_path=output_path,
+            group_by="category"
+        )
+
+        assert result is not None
+        assert output_path.exists()
+
+    def test_generate_chart_auto_filename(self, temp_csv_with_categories, tmp_path, monkeypatch):
+        """Test automatic filename generation."""
+        # Change to tmp_path so chart is created there
+        monkeypatch.chdir(tmp_path)
+
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        result = reporter.generate_chart(chart_type="bar", group_by="category")
+
+        assert result is not None
+        assert result.exists()
+        assert "bar_chart" in str(result)
+
+    def test_generate_chart_invalid_type(self, temp_csv_with_categories):
+        """Test error handling for invalid chart type."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        result = reporter.generate_chart(chart_type="invalid")
+
+        assert result is None
+
+    def test_generate_chart_pdf_format(self, temp_csv_with_categories, tmp_path):
+        """Test PDF output format."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        output_path = tmp_path / "test_chart.pdf"
+        result = reporter.generate_chart(
+            chart_type="bar",
+            output_path=output_path,
+            group_by="category"
+        )
+
+        assert result is not None
+        assert output_path.exists()
+        assert output_path.suffix == ".pdf"
+
+    def test_generate_chart_svg_format(self, temp_csv_with_categories, tmp_path):
+        """Test SVG output format."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        output_path = tmp_path / "test_chart.svg"
+        result = reporter.generate_chart(
+            chart_type="bar",
+            output_path=output_path,
+            group_by="category"
+        )
+
+        assert result is not None
+        assert output_path.exists()
+        assert output_path.suffix == ".svg"
+
+    def test_generate_chart_with_filtered_data(self, temp_csv_with_categories, tmp_path):
+        """Test chart generation with filtered data."""
+        reporter = CSVReporter([str(temp_csv_with_categories)])
+        reporter.load()
+
+        filtered = reporter.filter_data(filter_column="category", filter_value="Food")
+        output_path = tmp_path / "test_filtered.png"
+
+        result = reporter.generate_chart(
+            data=filtered,
+            chart_type="bar",
+            output_path=output_path
+        )
+
+        assert result is not None
+        assert output_path.exists()
+
+
+class TestChartWithoutMatplotlib:
+    """Tests for graceful handling when matplotlib is not installed."""
+
+    def test_has_matplotlib_flag_defined(self):
+        """Test HAS_MATPLOTLIB flag is defined."""
+        from projects.csv_reporter.reporter import HAS_MATPLOTLIB
+        assert isinstance(HAS_MATPLOTLIB, bool)
