@@ -160,6 +160,18 @@ def run_csv(args):
     else:
         print(report)
 
+    # Generate chart if requested
+    if getattr(args, 'chart', False):
+        chart_path = reporter.generate_chart(
+            data=filtered_data,
+            chart_type=getattr(args, 'chart_type', 'bar'),
+            output_path=getattr(args, 'chart_output', None),
+            group_by=args.group_by,
+            value_column=getattr(args, 'chart_column', None)
+        )
+        if chart_path:
+            print(f"Chart saved to: {chart_path}")
+
 
 def run_scrape(args):
     """Run the web scraper project."""
