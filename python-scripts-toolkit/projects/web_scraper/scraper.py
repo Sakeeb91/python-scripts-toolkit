@@ -50,6 +50,11 @@ class WebScraper:
         self.random_delay = random_delay or self.config["random_delay"]
         self.respect_rate_limits = respect_rate_limits or self.config["respect_rate_limits"]
 
+        # Request statistics
+        self.request_count = 0
+        self.total_delay_time = 0.0
+        self.start_time = None
+
         if self.session:
             self.session.headers.update({
                 "User-Agent": self.config["user_agent"]
@@ -142,6 +147,36 @@ class WebScraper:
             time.sleep(actual_delay)
 
         return actual_delay
+
+    def get_rate_stats(self) -> Dict[str, float]:
+        """Get request rate statistics.
+
+        Returns a dictionary with:
+        - request_count: total number of requests made
+        - total_delay_time: total time spent waiting (seconds)
+        - elapsed_time: total time since first request (seconds)
+        - avg_delay: average delay per request (seconds)
+        - requests_per_minute: effective request rate
+        """
+        elapsed = 0.0
+        if self.start_time is not None:
+            elapsed = time.time() - self.start_time
+
+        avg_delay = 0.0
+        if self.request_count > 0:
+            avg_delay = self.total_delay_time / self.request_count
+
+        rpm = 0.0
+        if elapsed > 0:
+            rpm = (self.request_count / elapsed) * 60
+
+        return {
+            "request_count": self.request_count,
+            "total_delay_time": round(self.total_delay_time, 2),
+            "elapsed_time": round(elapsed, 2),
+            "avg_delay": round(avg_delay, 2),
+            "requests_per_minute": round(rpm, 1)
+        }
 
     def fetch(self, url: str) -> Optional[BeautifulSoup]:
         """Fetch a URL with retry logic."""
