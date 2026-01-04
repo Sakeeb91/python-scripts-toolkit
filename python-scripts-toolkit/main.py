@@ -187,7 +187,21 @@ def run_scrape(args):
         print("  pip install requests beautifulsoup4")
         sys.exit(1)
 
-    scraper = WebScraper()
+    # Parse rate limiting options
+    delay = getattr(args, 'delay', None)
+    random_delay = None
+    if getattr(args, 'random_delay', None):
+        random_delay = WebScraper.parse_random_delay(args.random_delay)
+        if random_delay is None:
+            print("ERROR: Invalid random delay format. Use 'min-max' (e.g., '1-5')")
+            sys.exit(1)
+    respect_rate_limits = getattr(args, 'respect_rate_limits', False)
+
+    scraper = WebScraper(
+        delay=delay,
+        random_delay=random_delay,
+        respect_rate_limits=respect_rate_limits
+    )
 
     if args.preset == "hackernews":
         items = scraper.scrape_hacker_news()
@@ -206,6 +220,13 @@ def run_scrape(args):
 
     if items:
         scraper.save_to_csv(items, args.output, append=args.append)
+
+    # Print rate statistics if rate limiting was used
+    if delay or random_delay or respect_rate_limits:
+        stats = scraper.get_rate_stats()
+        print(f"\nRate stats: {stats['request_count']} requests, "
+              f"{stats['total_delay_time']}s delay, "
+              f"{stats['requests_per_minute']} req/min")
 
 
 def run_todo(args):
@@ -346,6 +367,13 @@ def main():
     scrape_parser.add_argument("--preset", choices=["hackernews"], help="Use a preset scraper")
     scrape_parser.add_argument("--dedupe", "-d", action="store_true", help="Skip already-seen URLs")
     scrape_parser.add_argument("--append", "-a", action="store_true", help="Append to existing CSV")
+    # Rate limiting options
+    scrape_parser.add_argument("--delay", type=float, metavar="SECONDS",
+                               help="Fixed delay between requests (seconds)")
+    scrape_parser.add_argument("--random-delay", metavar="MIN-MAX",
+                               help="Random delay range (e.g., '1-5' for 1-5 seconds)")
+    scrape_parser.add_argument("--respect-rate-limits", action="store_true",
+                               help="Honor server rate limit headers (Retry-After, X-RateLimit)")
 
     # Todo Manager
     todo_parser = subparsers.add_parser("todo", help="Manage your to-do list")
