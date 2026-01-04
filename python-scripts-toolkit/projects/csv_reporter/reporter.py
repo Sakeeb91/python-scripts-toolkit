@@ -80,6 +80,28 @@ class CSVReporter:
         "p75": "75th percentile (Q3)",
     }
 
+    # Available chart types
+    CHART_TYPES = {
+        "bar": "Vertical bar chart",
+        "hbar": "Horizontal bar chart",
+        "pie": "Pie chart for category breakdowns",
+        "line": "Line chart for time-series data",
+    }
+
+    # Supported chart output formats
+    CHART_FORMATS = {'.png', '.pdf', '.svg', '.jpg', '.jpeg'}
+
+    # Default chart styling
+    CHART_DEFAULTS = {
+        "figsize": (10, 6),
+        "dpi": 100,
+        "bar_color": "#3498db",
+        "pie_cmap": "Set3",
+        "line_color": "#2ecc71",
+        "title_fontsize": 14,
+        "label_fontsize": 10,
+    }
+
     def __init__(self, input_patterns: List[str]):
         self.input_paths = self._resolve_paths(input_patterns)
         self.logger = setup_logger("csv_reporter")
