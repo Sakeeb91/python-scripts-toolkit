@@ -1143,6 +1143,14 @@ Examples:
                         help="Show all advanced statistics (median, std dev, variance, percentiles)")
     parser.add_argument("--stats", metavar="STATS",
                         help="Comma-separated list of stats to show (median,stdev,variance,p25,p50,p75)")
+    parser.add_argument("--chart", action="store_true",
+                        help="Generate a chart alongside the text report")
+    parser.add_argument("--chart-type", choices=["bar", "hbar", "pie", "line"], default="bar",
+                        help="Chart type: bar (default), hbar, pie, line")
+    parser.add_argument("--chart-output", type=Path, metavar="FILE",
+                        help="Output file for chart (PNG, PDF, SVG, JPG)")
+    parser.add_argument("--chart-column", metavar="COLUMN",
+                        help="Numeric column to visualize (default: first numeric column)")
     args = parser.parse_args()
 
     reporter = CSVReporter(args.inputs)
@@ -1191,6 +1199,18 @@ Examples:
     # Export summary CSV
     if args.export_csv and args.group_by:
         reporter.export_summary_csv(args.export_csv, args.group_by, filtered_data)
+
+    # Generate chart
+    if args.chart:
+        chart_path = reporter.generate_chart(
+            data=filtered_data,
+            chart_type=args.chart_type,
+            output_path=args.chart_output,
+            group_by=args.group_by,
+            value_column=args.chart_column
+        )
+        if chart_path:
+            print(f"Chart saved to: {chart_path}")
 
 
 if __name__ == "__main__":
