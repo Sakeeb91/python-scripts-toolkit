@@ -40,6 +40,16 @@ try:
 except ImportError:
     HAS_OPENPYXL = False
 
+# Check for matplotlib availability
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend for headless servers
+    import matplotlib.pyplot as plt
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+    plt = None
+
 
 def _get_file_type(path: Path) -> str:
     """Detect file type by extension.
