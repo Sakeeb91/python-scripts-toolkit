@@ -1078,6 +1078,132 @@ class CSVReporter:
 
         return "\n".join(lines)
 
+
+    def generate_html_report(
+        self,
+        data: Optional[List[Dict[str, Any]]] = None,
+        group_by: Optional[str] = None
+    ) -> str:
+        """Generate an HTML-formatted report.
+
+        Args:
+            data: Data rows to include in report (uses self.data if None)
+            group_by: Optional column name to group data by
+
+        Returns:
+            HTML string with styled tables and formatted statistics
+            suitable for email reports and web viewing.
+        """
+        report_data = self._prepare_report_data(data, group_by)
+        metadata = report_data["metadata"]
+
+        # CSS styles for the report
+        styles = """
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 20px; background: #f5f5f5; }
+            .report-container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            h1 { color: #333; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+            h2 { color: #2c3e50; margin-top: 30px; }
+            h3 { color: #34495e; }
+            .metadata { background: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+            .metadata p { margin: 5px 0; }
+            table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background: #3498db; color: white; }
+            tr:nth-child(even) { background: #f9f9f9; }
+            tr:hover { background: #f0f0f0; }
+            .number { text-align: right; font-family: monospace; }
+        </style>
+        """
+
+        lines = [
+            "<!DOCTYPE html>",
+            "<html lang=\"en\">",
+            "<head>",
+            "    <meta charset=\"UTF-8\">",
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">",
+            f"    <title>CSV Report: {_escape_html(', '.join(metadata.sources))}</title>",
+            styles,
+            "</head>",
+            "<body>",
+            "<div class=\"report-container\">",
+            f"<h1>CSV Report: {_escape_html(', '.join(metadata.sources))}</h1>",
+            "<div class=\"metadata\">",
+            f"    <p><strong>Generated:</strong> {_escape_html(metadata.generated_at)}</p>",
+            f"    <p><strong>Total Rows:</strong> {metadata.total_rows:,}</p>",
+            f"    <p><strong>Columns:</strong> {_escape_html(', '.join(metadata.columns))}</p>",
+            "</div>",
+        ]
+
+        # Statistics section
+        if report_data["statistics"]:
+            lines.append("<h2>Numeric Summaries</h2>")
+
+            for col, stats in report_data["statistics"].items():
+                lines.append(f"<h3>{_escape_html(col)}</h3>")
+                lines.append("<table>")
+                lines.append("<tr><th>Metric</th><th>Value</th></tr>")
+                lines.append(f"<tr><td>Total</td><td class=\"number\">{stats['total']:,.2f}</td></tr>")
+                lines.append(f"<tr><td>Average</td><td class=\"number\">{stats['average']:,.2f}</td></tr>")
+
+                if "median" in stats:
+                    lines.append(f"<tr><td>Median</td><td class=\"number\">{stats['median']:,.2f}</td></tr>")
+                if "stdev" in stats:
+                    lines.append(f"<tr><td>Std Dev</td><td class=\"number\">{stats['stdev']:,.2f}</td></tr>")
+                if "variance" in stats:
+                    lines.append(f"<tr><td>Variance</td><td class=\"number\">{stats['variance']:,.2f}</td></tr>")
+
+                lines.append(f"<tr><td>Min</td><td class=\"number\">{stats['min']:,.2f}</td></tr>")
+                lines.append(f"<tr><td>Max</td><td class=\"number\">{stats['max']:,.2f}</td></tr>")
+
+                if "p25" in stats:
+                    lines.append(f"<tr><td>P25</td><td class=\"number\">{stats['p25']:,.2f}</td></tr>")
+                if "p50" in stats:
+                    lines.append(f"<tr><td>P50</td><td class=\"number\">{stats['p50']:,.2f}</td></tr>")
+                if "p75" in stats:
+                    lines.append(f"<tr><td>P75</td><td class=\"number\">{stats['p75']:,.2f}</td></tr>")
+
+                lines.append(f"<tr><td>Count</td><td class=\"number\">{stats['count']:,}</td></tr>")
+                lines.append("</table>")
+
+        # Group breakdown
+        if report_data["groups"]:
+            lines.append("<h2>Grouped Analysis</h2>")
+            lines.append("<table>")
+            lines.append("<tr><th>Group</th><th>Count</th><th>Totals</th></tr>")
+
+            for group_name, group_stats in report_data["groups"].items():
+                totals = ", ".join(
+                    f"{k}: {v:,.2f}" for k, v in group_stats.items()
+                    if k != "count" and isinstance(v, (int, float))
+                )
+                lines.append(f"<tr><td>{_escape_html(str(group_name))}</td><td class=\"number\">{group_stats['count']}</td><td>{_escape_html(totals)}</td></tr>")
+
+            lines.append("</table>")
+
+        # Category breakdown
+        if report_data["category_breakdown"]:
+            lines.append("<h2>Category Breakdown</h2>")
+            lines.append("<table>")
+            lines.append("<tr><th>Category</th><th>Count</th><th>Totals</th></tr>")
+
+            for cat, cat_stats in report_data["category_breakdown"].items():
+                totals = ", ".join(
+                    f"{k}: {v:,.2f}" for k, v in cat_stats.items()
+                    if k != "count" and isinstance(v, (int, float))
+                )
+                lines.append(f"<tr><td>{_escape_html(str(cat))}</td><td class=\"number\">{cat_stats['count']}</td><td>{_escape_html(totals)}</td></tr>")
+
+            lines.append("</table>")
+
+        lines.extend([
+            "</div>",
+            "</body>",
+            "</html>"
+        ])
+
+        return "\n".join(lines)
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
