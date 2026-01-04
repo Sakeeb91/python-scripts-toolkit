@@ -743,6 +743,85 @@ class CSVReporter:
 
         return True
 
+    def generate_chart(
+        self,
+        data: Optional[List[Dict[str, Any]]] = None,
+        chart_type: str = "bar",
+        output_path: Optional[Path] = None,
+        group_by: Optional[str] = None,
+        value_column: Optional[str] = None
+    ) -> Optional[Path]:
+        """Generate a chart visualization from the data.
+
+        Args:
+            data: Data to visualize (defaults to self.data)
+            chart_type: Type of chart ('bar', 'hbar', 'pie', 'line')
+            output_path: Where to save the chart (auto-generated if None)
+            group_by: Column to group data by
+            value_column: Numeric column to aggregate
+
+        Returns:
+            Path to generated chart file, or None if generation failed
+        """
+        if not HAS_MATPLOTLIB:
+            self.logger.error(
+                "Chart generation requires matplotlib. Install with:\n"
+                "  pip install matplotlib"
+            )
+            return None
+
+        # Validate chart type
+        if chart_type not in self.CHART_TYPES:
+            self.logger.error(
+                "Unknown chart type: %s (available: %s)",
+                chart_type, ", ".join(self.CHART_TYPES.keys())
+            )
+            return None
+
+        # Use provided data or default
+        chart_data = data if data is not None else self.data
+
+        if not chart_data:
+            self.logger.error("No data available for chart generation")
+            return None
+
+        # Prepare chart data
+        labels, values, title = self._prepare_chart_data(chart_data, group_by, value_column)
+
+        if not labels or not values:
+            self.logger.error("Could not prepare data for chart")
+            return None
+
+        # Generate default output path if not provided
+        if output_path is None:
+            base_name = self.input_paths[0].stem if self.input_paths else "chart"
+            output_path = Path(f"{base_name}_{chart_type}_chart.png")
+
+        # Validate output format
+        if output_path.suffix.lower() not in self.CHART_FORMATS:
+            self.logger.warning(
+                "Unknown format '%s', using PNG",
+                output_path.suffix
+            )
+            output_path = output_path.with_suffix('.png')
+
+        # Create the appropriate chart type
+        chart_methods = {
+            "bar": self._create_bar_chart,
+            "hbar": self._create_horizontal_bar_chart,
+            "pie": self._create_pie_chart,
+            "line": self._create_line_chart,
+        }
+
+        success = chart_methods[chart_type](labels, values, title, output_path)
+
+        if success:
+            self.logger.info("Chart saved to: %s", output_path)
+            return output_path
+        else:
+            self.logger.error("Failed to create chart")
+            return None
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
