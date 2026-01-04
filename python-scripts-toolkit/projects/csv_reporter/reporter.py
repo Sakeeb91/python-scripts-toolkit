@@ -525,6 +525,55 @@ class CSVReporter:
 
         return labels, values, title
 
+    def _create_bar_chart(
+        self,
+        labels: List[str],
+        values: List[float],
+        title: str,
+        output_path: Path
+    ) -> bool:
+        """Create a vertical bar chart.
+
+        Args:
+            labels: Category labels for x-axis
+            values: Numeric values for bar heights
+            title: Chart title
+            output_path: Path to save the chart
+
+        Returns:
+            True if chart was created successfully
+        """
+        if not HAS_MATPLOTLIB:
+            return False
+
+        fig, ax = plt.subplots(figsize=self.CHART_DEFAULTS["figsize"])
+
+        bars = ax.bar(labels, values, color=self.CHART_DEFAULTS["bar_color"])
+
+        ax.set_title(title, fontsize=self.CHART_DEFAULTS["title_fontsize"])
+        ax.set_xlabel("Category", fontsize=self.CHART_DEFAULTS["label_fontsize"])
+        ax.set_ylabel("Value", fontsize=self.CHART_DEFAULTS["label_fontsize"])
+
+        # Rotate labels if there are many categories
+        if len(labels) > 5:
+            plt.xticks(rotation=45, ha='right')
+
+        # Add value labels on bars
+        for bar, val in zip(bars, values):
+            height = bar.get_height()
+            ax.annotate(f'{val:,.0f}',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center', va='bottom',
+                        fontsize=8)
+
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=self.CHART_DEFAULTS["dpi"])
+        plt.close(fig)
+
+        return True
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
