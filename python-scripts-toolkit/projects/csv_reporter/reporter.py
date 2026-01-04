@@ -693,6 +693,56 @@ class CSVReporter:
 
         return True
 
+    def _create_line_chart(
+        self,
+        labels: List[str],
+        values: List[float],
+        title: str,
+        output_path: Path
+    ) -> bool:
+        """Create a line chart for time-series or sequential data.
+
+        Args:
+            labels: Category/time labels for x-axis
+            values: Numeric values for the line
+            title: Chart title
+            output_path: Path to save the chart
+
+        Returns:
+            True if chart was created successfully
+        """
+        if not HAS_MATPLOTLIB:
+            return False
+
+        fig, ax = plt.subplots(figsize=self.CHART_DEFAULTS["figsize"])
+
+        # Plot line with markers
+        ax.plot(
+            labels,
+            values,
+            color=self.CHART_DEFAULTS["line_color"],
+            marker='o',
+            linewidth=2,
+            markersize=6
+        )
+
+        ax.set_title(title, fontsize=self.CHART_DEFAULTS["title_fontsize"])
+        ax.set_xlabel("Category", fontsize=self.CHART_DEFAULTS["label_fontsize"])
+        ax.set_ylabel("Value", fontsize=self.CHART_DEFAULTS["label_fontsize"])
+
+        # Rotate labels if there are many points
+        if len(labels) > 5:
+            plt.xticks(rotation=45, ha='right')
+
+        # Add grid for readability
+        ax.grid(True, linestyle='--', alpha=0.7)
+
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=self.CHART_DEFAULTS["dpi"])
+        plt.close(fig)
+
+        return True
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
