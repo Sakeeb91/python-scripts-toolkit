@@ -941,6 +941,28 @@ class CSVReporter:
 
         return result
 
+
+    def generate_json_report(
+        self,
+        data: Optional[List[Dict[str, Any]]] = None,
+        group_by: Optional[str] = None,
+        indent: int = 2
+    ) -> str:
+        """Generate a JSON-formatted report.
+
+        Args:
+            data: Data rows to include in report (uses self.data if None)
+            group_by: Optional column name to group data by
+            indent: Number of spaces for JSON indentation (default: 2)
+
+        Returns:
+            JSON string containing the complete report with metadata,
+            statistics, and optional groupings.
+        """
+        report_data = self._prepare_report_data(data, group_by)
+        json_data = self._format_statistics_for_json(report_data)
+        return json.dumps(json_data, indent=indent, cls=ReportEncoder)
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
