@@ -144,6 +144,15 @@ python python-scripts-toolkit/main.py scrape https://example.com --selector "h2.
 
 # Dedupe to only save new items
 python python-scripts-toolkit/main.py scrape --preset hackernews --dedupe --append --output hn.csv
+
+# Rate limiting: fixed 2-second delay between requests
+python python-scripts-toolkit/main.py scrape https://example.com --delay 2 --output data.csv
+
+# Rate limiting: random delay between 1-5 seconds
+python python-scripts-toolkit/main.py scrape https://example.com --random-delay 1-5 --output data.csv
+
+# Respect server rate limit headers (Retry-After, X-RateLimit)
+python python-scripts-toolkit/main.py scrape https://example.com --respect-rate-limits --output data.csv
 ```
 
 **Features:**
@@ -151,6 +160,8 @@ python python-scripts-toolkit/main.py scrape --preset hackernews --dedupe --appe
 - Custom CSS selector support
 - URL deduplication
 - Retry logic with error handling
+- Configurable rate limiting (fixed, random, or server-based)
+- Request rate statistics
 
 **Note:** Requires `pip install requests beautifulsoup4`
 
