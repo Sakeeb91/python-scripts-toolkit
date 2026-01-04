@@ -84,6 +84,24 @@ class ReportMetadata:
         }
 
 
+class ReportEncoder(json.JSONEncoder):
+    """Custom JSON encoder for report data types.
+
+    Handles serialization of datetime objects, Path objects, and other
+    special types that may appear in report data.
+    """
+
+    def default(self, obj: Any) -> Any:
+        """Convert special types to JSON-serializable formats."""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, Path):
+            return str(obj)
+        if hasattr(obj, 'to_dict'):
+            return obj.to_dict()
+        return super().default(obj)
+
+
 def _get_file_type(path: Path) -> str:
     """Detect file type by extension.
 
