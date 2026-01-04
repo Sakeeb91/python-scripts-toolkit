@@ -21,6 +21,7 @@ from glob import glob
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from enum import Enum
+from dataclasses import dataclass, field
 import json
 import sys
 
@@ -59,6 +60,28 @@ class OutputFormat(Enum):
     JSON = "json"
     MARKDOWN = "markdown"
     HTML = "html"
+
+
+@dataclass
+class ReportMetadata:
+    """Structured metadata for report generation.
+
+    Contains source file information, generation timestamp, and row counts
+    used across all output formats for consistent metadata representation.
+    """
+    sources: List[str] = field(default_factory=list)
+    generated_at: str = ""
+    total_rows: int = 0
+    columns: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert metadata to dictionary for JSON serialization."""
+        return {
+            "sources": self.sources,
+            "generated_at": self.generated_at,
+            "total_rows": self.total_rows,
+            "columns": self.columns,
+        }
 
 
 def _get_file_type(path: Path) -> str:
