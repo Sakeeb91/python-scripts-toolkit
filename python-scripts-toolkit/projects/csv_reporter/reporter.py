@@ -1,6 +1,7 @@
 """
 CSV Report Generator - Reads CSV files and generates summary reports.
 
+Supports multiple output formats: text (default), JSON, Markdown, and HTML.
 Supports advanced statistics including median, standard deviation, variance,
 and percentiles (P25, P50, P75) using Python's statistics module.
 
@@ -15,6 +16,12 @@ Usage:
     python -m projects.csv_reporter.reporter input.csv --date-from 2024-01-01 --date-to 2024-12-31
     python -m projects.csv_reporter.reporter input.csv --full-stats
     python -m projects.csv_reporter.reporter input.csv --stats median,stdev,p75
+
+    # Output format selection (text, json, markdown, html)
+    python -m projects.csv_reporter.reporter input.csv --format json --output report.json
+    python -m projects.csv_reporter.reporter input.csv --format markdown --output report.md
+    python -m projects.csv_reporter.reporter input.csv --format html --output report.html
+    python -m projects.csv_reporter.reporter input.csv --format json | jq '.statistics'
 
     # Chart generation (requires matplotlib)
     python -m projects.csv_reporter.reporter expenses.csv --group-by category --chart
