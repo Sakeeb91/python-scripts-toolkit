@@ -115,7 +115,7 @@ def run_organize(args):
 
 def run_csv(args):
     """Run the CSV reporter project."""
-    from projects.csv_reporter.reporter import CSVReporter, _get_file_type
+    from projects.csv_reporter.reporter import CSVReporter, _get_file_type, OutputFormat
 
     reporter = CSVReporter([str(args.input)])
 
@@ -151,7 +151,15 @@ def run_csv(args):
         date_to=args.date_to
     )
 
-    report = reporter.generate_report(filtered_data, group_by=args.group_by)
+    # Map format string to OutputFormat enum
+    format_map = {
+        "text": OutputFormat.TEXT,
+        "json": OutputFormat.JSON,
+        "markdown": OutputFormat.MARKDOWN,
+        "html": OutputFormat.HTML,
+    }
+    output_format = format_map.get(getattr(args, 'format', 'text'), OutputFormat.TEXT)
+    report = reporter.generate_report(filtered_data, group_by=args.group_by, output_format=output_format)
 
     if args.output:
         with open(args.output, 'w') as f:
@@ -350,6 +358,8 @@ def main():
                             help="Show all advanced statistics (median, std dev, variance, percentiles)")
     csv_parser.add_argument("--stats", metavar="STATS",
                             help="Comma-separated list of stats: median,stdev,variance,p25,p50,p75")
+    csv_parser.add_argument("--format", "-f", choices=["text", "json", "markdown", "html"], default="text",
+                            help="Output format: text (default), json, markdown, html")
     csv_parser.add_argument("--chart", action="store_true",
                             help="Generate a chart alongside the text report")
     csv_parser.add_argument("--chart-type", choices=["bar", "hbar", "pie", "line"], default="bar",
