@@ -9,6 +9,7 @@ A Python script that fetches web pages, extracts structured data using CSS selec
 - [Core Code Explained](#core-code-explained)
 - [HTTP and Web Fundamentals](#http-and-web-fundamentals)
 - [HTML Parsing Patterns](#html-parsing-patterns)
+- [Rate Limiting](#rate-limiting)
 - [Ethical Scraping](#ethical-scraping)
 - [Extending the Project](#extending-the-project)
 
@@ -512,6 +513,85 @@ for card in soup.select('div.card'):
 
 ---
 
+## Rate Limiting
+
+The web scraper includes built-in rate limiting to prevent overwhelming target servers and avoid getting blocked.
+
+### Rate Limiting Options
+
+| Option | CLI Flag | Description |
+|--------|----------|-------------|
+| Fixed Delay | `--delay SECONDS` | Wait fixed seconds between requests |
+| Random Delay | `--random-delay MIN-MAX` | Wait random seconds in range |
+| Server Headers | `--respect-rate-limits` | Honor Retry-After and X-RateLimit headers |
+
+### Usage Examples
+
+```bash
+# Fixed 2-second delay between requests
+python main.py scrape https://example.com --delay 2 --output data.csv
+
+# Random delay between 1-5 seconds (more human-like)
+python main.py scrape https://example.com --random-delay 1-5 --output data.csv
+
+# Respect server rate limit headers
+python main.py scrape https://example.com --respect-rate-limits --output data.csv
+
+# Combine options
+python main.py scrape https://example.com --delay 1 --respect-rate-limits --output data.csv
+```
+
+### Programmatic Usage
+
+```python
+from projects.web_scraper.scraper import WebScraper
+
+# Fixed delay
+scraper = WebScraper(delay=2.0)
+
+# Random delay
+scraper = WebScraper(random_delay=(1.0, 5.0))
+
+# Respect server headers
+scraper = WebScraper(respect_rate_limits=True)
+
+# Get rate statistics after scraping
+items = scraper.scrape_generic("https://example.com")
+stats = scraper.get_rate_stats()
+print(f"Requests: {stats['request_count']}")
+print(f"Total delay: {stats['total_delay_time']}s")
+print(f"Rate: {stats['requests_per_minute']} req/min")
+```
+
+### Supported Rate Limit Headers
+
+The scraper can parse and respect these common rate limiting headers:
+
+| Header | Description |
+|--------|-------------|
+| `Retry-After` | Seconds to wait (standard HTTP header for 429 responses) |
+| `X-RateLimit-Remaining` | Requests remaining in current window |
+| `X-RateLimit-Reset` | Unix timestamp when limit resets |
+
+When `X-RateLimit-Remaining` is 0 and `X-RateLimit-Reset` is present, the scraper automatically waits until the reset time.
+
+### Pagination with Rate Limiting
+
+For scraping multiple pages, rate limiting is automatically applied:
+
+```python
+scraper = WebScraper(delay=2.0)
+
+# Rate limiting applies between each page request
+items = scraper.scrape_paginated(
+    base_url="https://example.com/items",
+    max_pages=10,
+    page_param="page"
+)
+```
+
+---
+
 ## Ethical Scraping
 
 ### Best Practices
@@ -528,13 +608,16 @@ for card in soup.select('div.card'):
        # OK to scrape
    ```
 
-2. **Rate limiting**
-   ```python
-   import time
+2. **Rate limiting** (built-in support)
+   ```bash
+   # Fixed delay of 2 seconds between requests
+   python main.py scrape https://example.com --delay 2 -o data.csv
 
-   for url in urls:
-       data = scrape(url)
-       time.sleep(1)  # Wait 1 second between requests
+   # Random delay between 1-5 seconds
+   python main.py scrape https://example.com --random-delay 1-5 -o data.csv
+
+   # Respect server rate limit headers
+   python main.py scrape https://example.com --respect-rate-limits -o data.csv
    ```
 
 3. **Identify yourself**
