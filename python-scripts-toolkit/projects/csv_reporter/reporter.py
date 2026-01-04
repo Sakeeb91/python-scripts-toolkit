@@ -452,6 +452,56 @@ class CSVReporter:
 
         return result
 
+    def _prepare_chart_data(
+        self,
+        data: List[Dict[str, Any]],
+        group_by: Optional[str] = None,
+        value_column: Optional[str] = None
+    ) -> tuple:
+        """Prepare data for chart generation by aggregating values.
+
+        Args:
+            data: List of data rows to process
+            group_by: Column to group data by (categories/labels)
+            value_column: Numeric column to aggregate (values)
+
+        Returns:
+            Tuple of (labels, values, title) for chart rendering
+        """
+        # Determine the grouping column
+        if group_by and group_by in self.headers:
+            group_col = group_by
+        elif self.category_column:
+            group_col = self.category_column
+        else:
+            group_col = self.headers[0] if self.headers else None
+
+        # Determine the value column
+        if value_column and value_column in self.numeric_columns:
+            val_col = value_column
+        elif self.numeric_columns:
+            val_col = self.numeric_columns[0]
+        else:
+            val_col = None
+
+        if not group_col or not val_col:
+            return [], [], "No data available for chart"
+
+        # Aggregate data by group
+        groups = defaultdict(float)
+        for row in data:
+            key = row.get(group_col, "Unknown")
+            groups[key] += self._parse_numeric(row.get(val_col, ""))
+
+        # Sort by value descending
+        sorted_groups = sorted(groups.items(), key=lambda x: -x[1])
+
+        labels = [item[0] for item in sorted_groups]
+        values = [item[1] for item in sorted_groups]
+        title = f"{val_col} by {group_col}"
+
+        return labels, values, title
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
