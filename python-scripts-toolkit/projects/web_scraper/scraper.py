@@ -316,6 +316,42 @@ class WebScraper:
         else:
             return self.extract_links(soup, url)
 
+    def scrape_paginated(
+        self,
+        base_url: str,
+        selector: Optional[str] = None,
+        max_pages: int = 10,
+        page_param: str = "page"
+    ) -> List[Dict[str, str]]:
+        """Scrape multiple pages with rate limiting between requests.
+
+        Args:
+            base_url: Base URL (page parameter will be appended)
+            selector: Optional CSS selector for extraction
+            max_pages: Maximum number of pages to scrape
+            page_param: URL parameter name for pagination (default: 'page')
+
+        Returns:
+            Combined list of all scraped items from all pages.
+        """
+        all_items = []
+
+        for page in range(1, max_pages + 1):
+            # Build paginated URL
+            separator = "&" if "?" in base_url else "?"
+            url = f"{base_url}{separator}{page_param}={page}"
+
+            self.logger.info(f"Scraping page {page}/{max_pages}: {url}")
+            items = self.scrape_generic(url, selector)
+
+            if not items:
+                self.logger.info(f"No items found on page {page}, stopping pagination")
+                break
+
+            all_items.extend(items)
+
+        return all_items
+
     def dedupe(self, items: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """Remove items we've already seen (by URL)."""
         new_items = []
