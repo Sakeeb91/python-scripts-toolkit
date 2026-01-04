@@ -7,6 +7,7 @@ Usage:
 """
 import argparse
 import csv
+import random
 import time
 from pathlib import Path
 from datetime import datetime
@@ -31,12 +32,23 @@ from utils.helpers import load_json, save_json
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
 
-    def __init__(self, dedupe_file: Optional[Path] = None):
+    def __init__(
+        self,
+        dedupe_file: Optional[Path] = None,
+        delay: Optional[float] = None,
+        random_delay: Optional[tuple] = None,
+        respect_rate_limits: bool = False
+    ):
         self.logger = setup_logger("web_scraper")
         self.config = WEB_SCRAPER_CONFIG
         self.session = requests.Session() if HAS_DEPENDENCIES else None
         self.dedupe_file = dedupe_file or (DATA_DIR / "scraped" / "seen_urls.json")
         self.seen_urls = set(load_json(self.dedupe_file).get("urls", []))
+
+        # Rate limiting configuration
+        self.delay = delay if delay is not None else self.config["delay"]
+        self.random_delay = random_delay or self.config["random_delay"]
+        self.respect_rate_limits = respect_rate_limits or self.config["respect_rate_limits"]
 
         if self.session:
             self.session.headers.update({
