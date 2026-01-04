@@ -102,6 +102,26 @@ class ReportEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+
+
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters to prevent XSS attacks.
+
+    Args:
+        text: The text to escape
+
+    Returns:
+        Text with HTML special characters escaped.
+    """
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#x27;")
+    )
+
 def _get_file_type(path: Path) -> str:
     """Detect file type by extension.
 
