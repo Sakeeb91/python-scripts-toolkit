@@ -179,10 +179,19 @@ class WebScraper:
         }
 
     def fetch(self, url: str) -> Optional[BeautifulSoup]:
-        """Fetch a URL with retry logic."""
+        """Fetch a URL with retry logic and rate limiting."""
         if not HAS_DEPENDENCIES:
             self.logger.error("Missing dependencies. Run: pip install requests beautifulsoup4")
             return None
+
+        # Track start time on first request
+        if self.start_time is None:
+            self.start_time = time.time()
+
+        # Apply rate limiting delay before request (except first)
+        if self.request_count > 0:
+            delay_applied = self._wait()
+            self.total_delay_time += delay_applied
 
         for attempt in range(self.config["retry_attempts"]):
             try:
@@ -190,6 +199,14 @@ class WebScraper:
                     url,
                     timeout=self.config["timeout"]
                 )
+                self.request_count += 1
+
+                # Check for rate limit headers and wait if needed
+                if self.respect_rate_limits:
+                    header_delay = self._wait(response)
+                    if header_delay > 0:
+                        self.total_delay_time += header_delay
+
                 response.raise_for_status()
                 return BeautifulSoup(response.text, "html.parser")
 
