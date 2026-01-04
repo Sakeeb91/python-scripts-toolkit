@@ -822,6 +822,96 @@ class CSVReporter:
             self.logger.error("Failed to create chart")
             return None
 
+
+    def _prepare_report_data(
+        self,
+        data: Optional[List[Dict[str, Any]]] = None,
+        group_by: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Prepare structured report data for all output formats.
+
+        Args:
+            data: Data rows to include in report (uses self.data if None)
+            group_by: Optional column name to group data by
+
+        Returns:
+            Dictionary with metadata, statistics, and group data ready for
+            formatting into any output format (text, JSON, Markdown, HTML).
+        """
+        data = data or self.data
+
+        # Build metadata
+        metadata = ReportMetadata(
+            sources=[p.name for p in self.input_paths],
+            generated_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            total_rows=len(data),
+            columns=self.headers
+        )
+
+        # Prepare the result structure
+        result: Dict[str, Any] = {
+            "metadata": metadata,
+            "statistics": {},
+            "groups": {},
+            "category_breakdown": {}
+        }
+
+        # Compute statistics for numeric columns
+        for col in self.numeric_columns:
+            values = [self._parse_numeric(row.get(col, "")) for row in data]
+            if values:
+                col_stats = {
+                    "total": sum(values),
+                    "average": sum(values) / len(values) if values else 0,
+                    "min": min(values),
+                    "max": max(values),
+                    "count": len([v for v in values if v != 0])
+                }
+
+                # Add advanced statistics if configured
+                if self.full_stats or self.selected_stats:
+                    advanced = self._compute_advanced_stats(values)
+                    stats_to_show = self.selected_stats or list(self.AVAILABLE_STATS.keys())
+                    for stat in stats_to_show:
+                        if stat in advanced:
+                            col_stats[stat] = advanced[stat]
+
+                result["statistics"][col] = col_stats
+
+        # Group by analysis
+        if group_by and group_by in self.headers:
+            groups = defaultdict(list)
+            for row in data:
+                key = row.get(group_by, "Unknown")
+                groups[key].append(row)
+
+            for group_name, group_data in sorted(groups.items()):
+                group_stats = {"count": len(group_data)}
+                for col in self.numeric_columns:
+                    values = [self._parse_numeric(row.get(col, "")) for row in group_data]
+                    if values:
+                        group_stats[f"{col}_total"] = sum(values)
+                result["groups"][group_name] = group_stats
+
+        # Category breakdown (if detected and no group_by)
+        elif self.category_column:
+            categories = defaultdict(int)
+            category_sums = defaultdict(lambda: defaultdict(float))
+
+            for row in data:
+                cat = row.get(self.category_column, "Unknown")
+                categories[cat] += 1
+                for col in self.numeric_columns:
+                    category_sums[cat][col] += self._parse_numeric(row.get(col, ""))
+
+            for cat, count in sorted(categories.items(), key=lambda x: -x[1]):
+                result["category_breakdown"][cat] = {
+                    "count": count,
+                    **{col: total for col, total in category_sums[cat].items()}
+                }
+
+        return result
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
