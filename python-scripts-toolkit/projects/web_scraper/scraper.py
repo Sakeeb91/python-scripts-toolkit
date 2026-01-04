@@ -55,6 +55,28 @@ class WebScraper:
                 "User-Agent": self.config["user_agent"]
             })
 
+    @staticmethod
+    def parse_random_delay(delay_str: str) -> Optional[tuple]:
+        """Parse a random delay range string like '1-5' into (min, max) tuple.
+
+        Args:
+            delay_str: A string in format 'min-max' (e.g., '1-5' or '0.5-2')
+
+        Returns:
+            Tuple of (min, max) floats, or None if parsing fails.
+        """
+        try:
+            parts = delay_str.split('-')
+            if len(parts) != 2:
+                return None
+            min_delay = float(parts[0])
+            max_delay = float(parts[1])
+            if min_delay < 0 or max_delay < 0 or min_delay > max_delay:
+                return None
+            return (min_delay, max_delay)
+        except (ValueError, IndexError):
+            return None
+
     def _wait(self) -> float:
         """Apply rate limiting delay between requests.
 
