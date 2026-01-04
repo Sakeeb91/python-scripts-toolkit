@@ -640,6 +640,59 @@ class CSVReporter:
 
         return True
 
+    def _create_pie_chart(
+        self,
+        labels: List[str],
+        values: List[float],
+        title: str,
+        output_path: Path
+    ) -> bool:
+        """Create a pie chart.
+
+        Args:
+            labels: Category labels for slices
+            values: Numeric values for slice sizes
+            title: Chart title
+            output_path: Path to save the chart
+
+        Returns:
+            True if chart was created successfully
+        """
+        if not HAS_MATPLOTLIB:
+            return False
+
+        fig, ax = plt.subplots(figsize=self.CHART_DEFAULTS["figsize"])
+
+        # Calculate percentages for display
+        total = sum(values)
+        percentages = [(v / total) * 100 if total > 0 else 0 for v in values]
+
+        # Limit to top categories if too many (combine rest into "Other")
+        max_slices = 8
+        if len(labels) > max_slices:
+            top_labels = labels[:max_slices - 1] + ["Other"]
+            top_values = values[:max_slices - 1] + [sum(values[max_slices - 1:])]
+        else:
+            top_labels = labels
+            top_values = values
+
+        # Create pie chart with percentage labels
+        wedges, texts, autotexts = ax.pie(
+            top_values,
+            labels=top_labels,
+            autopct='%1.1f%%',
+            colors=plt.cm.get_cmap(self.CHART_DEFAULTS["pie_cmap"]).colors,
+            startangle=90
+        )
+
+        ax.set_title(title, fontsize=self.CHART_DEFAULTS["title_fontsize"])
+
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=self.CHART_DEFAULTS["dpi"])
+        plt.close(fig)
+
+        return True
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
