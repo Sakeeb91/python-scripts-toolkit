@@ -80,12 +80,20 @@ class WebScraper:
     def _wait(self) -> float:
         """Apply rate limiting delay between requests.
 
+        Uses random delay if configured, otherwise uses fixed delay.
         Returns the actual delay applied in seconds.
         """
-        if self.delay > 0:
-            time.sleep(self.delay)
-            return self.delay
-        return 0.0
+        actual_delay = 0.0
+
+        if self.random_delay:
+            min_delay, max_delay = self.random_delay
+            actual_delay = random.uniform(min_delay, max_delay)
+            time.sleep(actual_delay)
+        elif self.delay > 0:
+            actual_delay = self.delay
+            time.sleep(actual_delay)
+
+        return actual_delay
 
     def fetch(self, url: str) -> Optional[BeautifulSoup]:
         """Fetch a URL with retry logic."""
