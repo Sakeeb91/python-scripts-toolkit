@@ -963,6 +963,101 @@ class CSVReporter:
         json_data = self._format_statistics_for_json(report_data)
         return json.dumps(json_data, indent=indent, cls=ReportEncoder)
 
+
+    def generate_markdown_report(
+        self,
+        data: Optional[List[Dict[str, Any]]] = None,
+        group_by: Optional[str] = None
+    ) -> str:
+        """Generate a Markdown-formatted report.
+
+        Args:
+            data: Data rows to include in report (uses self.data if None)
+            group_by: Optional column name to group data by
+
+        Returns:
+            Markdown string with headers, tables, and formatted statistics
+            suitable for documentation or GitHub rendering.
+        """
+        report_data = self._prepare_report_data(data, group_by)
+        metadata = report_data["metadata"]
+        lines = []
+
+        # Title and metadata
+        lines.append(f"# CSV Report: {', '.join(metadata.sources)}")
+        lines.append("")
+        lines.append(f"**Generated:** {metadata.generated_at}")
+        lines.append(f"**Total Rows:** {metadata.total_rows:,}")
+        lines.append(f"**Columns:** {', '.join(metadata.columns)}")
+        lines.append("")
+
+        # Statistics table
+        if report_data["statistics"]:
+            lines.append("## Numeric Summaries")
+            lines.append("")
+
+            for col, stats in report_data["statistics"].items():
+                lines.append(f"### {col}")
+                lines.append("")
+                lines.append("| Metric | Value |")
+                lines.append("|--------|-------|")
+                lines.append(f"| Total | {stats['total']:,.2f} |")
+                lines.append(f"| Average | {stats['average']:,.2f} |")
+
+                # Advanced stats if present
+                if "median" in stats:
+                    lines.append(f"| Median | {stats['median']:,.2f} |")
+                if "stdev" in stats:
+                    lines.append(f"| Std Dev | {stats['stdev']:,.2f} |")
+                if "variance" in stats:
+                    lines.append(f"| Variance | {stats['variance']:,.2f} |")
+
+                lines.append(f"| Min | {stats['min']:,.2f} |")
+                lines.append(f"| Max | {stats['max']:,.2f} |")
+
+                # Percentiles if present
+                if "p25" in stats:
+                    lines.append(f"| P25 | {stats['p25']:,.2f} |")
+                if "p50" in stats:
+                    lines.append(f"| P50 | {stats['p50']:,.2f} |")
+                if "p75" in stats:
+                    lines.append(f"| P75 | {stats['p75']:,.2f} |")
+
+                lines.append(f"| Count | {stats['count']:,} |")
+                lines.append("")
+
+        # Group breakdown
+        if report_data["groups"]:
+            lines.append("## Grouped Analysis")
+            lines.append("")
+            lines.append("| Group | Count | Totals |")
+            lines.append("|-------|-------|--------|")
+
+            for group_name, group_stats in report_data["groups"].items():
+                totals = ", ".join(
+                    f"{k}: {v:,.2f}" for k, v in group_stats.items()
+                    if k != "count" and isinstance(v, (int, float))
+                )
+                lines.append(f"| {group_name} | {group_stats['count']} | {totals} |")
+            lines.append("")
+
+        # Category breakdown
+        if report_data["category_breakdown"]:
+            lines.append("## Category Breakdown")
+            lines.append("")
+            lines.append("| Category | Count | Totals |")
+            lines.append("|----------|-------|--------|")
+
+            for cat, cat_stats in report_data["category_breakdown"].items():
+                totals = ", ".join(
+                    f"{k}: {v:,.2f}" for k, v in cat_stats.items()
+                    if k != "count" and isinstance(v, (int, float))
+                )
+                lines.append(f"| {cat} | {cat_stats['count']} | {totals} |")
+            lines.append("")
+
+        return "\n".join(lines)
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
