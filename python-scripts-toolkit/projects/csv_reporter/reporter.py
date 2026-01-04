@@ -912,6 +912,35 @@ class CSVReporter:
 
         return result
 
+
+    def _format_statistics_for_json(self, report_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Format report data for JSON output.
+
+        Converts ReportMetadata to dict and ensures all values are
+        JSON-serializable.
+
+        Args:
+            report_data: Dictionary from _prepare_report_data
+
+        Returns:
+            Dictionary with all values ready for JSON serialization.
+        """
+        result = {
+            "metadata": report_data["metadata"].to_dict(),
+            "statistics": {},
+            "groups": report_data.get("groups", {}),
+            "category_breakdown": report_data.get("category_breakdown", {})
+        }
+
+        # Format statistics with consistent precision
+        for col, stats in report_data.get("statistics", {}).items():
+            result["statistics"][col] = {
+                key: round(val, 2) if isinstance(val, float) else val
+                for key, val in stats.items()
+            }
+
+        return result
+
     def filter_data(
         self,
         filter_column: Optional[str] = None,
