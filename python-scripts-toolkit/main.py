@@ -317,6 +317,14 @@ def main():
                             help="Show all advanced statistics (median, std dev, variance, percentiles)")
     csv_parser.add_argument("--stats", metavar="STATS",
                             help="Comma-separated list of stats: median,stdev,variance,p25,p50,p75")
+    csv_parser.add_argument("--chart", action="store_true",
+                            help="Generate a chart alongside the text report")
+    csv_parser.add_argument("--chart-type", choices=["bar", "hbar", "pie", "line"], default="bar",
+                            help="Chart type: bar (default), hbar, pie, line")
+    csv_parser.add_argument("--chart-output", type=Path, metavar="FILE",
+                            help="Output file for chart (PNG, PDF, SVG, JPG)")
+    csv_parser.add_argument("--chart-column", metavar="COLUMN",
+                            help="Numeric column to visualize")
 
     # Web Scraper
     scrape_parser = subparsers.add_parser("scrape", help="Scrape websites and save to CSV")
