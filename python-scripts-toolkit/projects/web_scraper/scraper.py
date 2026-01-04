@@ -407,6 +407,11 @@ Examples:
   %(prog)s https://example.com --selector "h2.title" --output titles.csv
   %(prog)s https://example.com --dedupe --append --output data.csv
 
+Rate limiting:
+  %(prog)s https://example.com --delay 2 --output data.csv
+  %(prog)s https://example.com --random-delay 1-5 --output data.csv
+  %(prog)s https://example.com --respect-rate-limits --output data.csv
+
 Preset scrapers:
   %(prog)s --preset hackernews --output hn.csv
         """
@@ -418,6 +423,13 @@ Preset scrapers:
     parser.add_argument("--preset", choices=["hackernews"], help="Use a preset scraper")
     parser.add_argument("--dedupe", "-d", action="store_true", help="Skip URLs seen before")
     parser.add_argument("--append", "-a", action="store_true", help="Append to existing CSV")
+    # Rate limiting options
+    parser.add_argument("--delay", type=float, metavar="SECONDS",
+                        help="Fixed delay between requests (seconds)")
+    parser.add_argument("--random-delay", metavar="MIN-MAX",
+                        help="Random delay range (e.g., '1-5' for 1-5 seconds)")
+    parser.add_argument("--respect-rate-limits", action="store_true",
+                        help="Honor server rate limit headers (Retry-After, X-RateLimit)")
 
     args = parser.parse_args()
 
@@ -426,7 +438,18 @@ Preset scrapers:
         print("  pip install requests beautifulsoup4")
         sys.exit(1)
 
-    scraper = WebScraper()
+    # Parse rate limiting options
+    random_delay = None
+    if args.random_delay:
+        random_delay = WebScraper.parse_random_delay(args.random_delay)
+        if random_delay is None:
+            parser.error("Invalid random delay format. Use 'min-max' (e.g., '1-5')")
+
+    scraper = WebScraper(
+        delay=args.delay,
+        random_delay=random_delay,
+        respect_rate_limits=args.respect_rate_limits
+    )
 
     # Use preset or generic scraper
     if args.preset == "hackernews":
@@ -450,6 +473,13 @@ Preset scrapers:
         scraper.save_to_csv(items, args.output, append=args.append)
     else:
         print("No new items to save")
+
+    # Print rate statistics if rate limiting was used
+    if args.delay or args.random_delay or args.respect_rate_limits:
+        stats = scraper.get_rate_stats()
+        print(f"\nRate stats: {stats['request_count']} requests, "
+              f"{stats['total_delay_time']}s delay, "
+              f"{stats['requests_per_minute']} req/min")
 
 
 if __name__ == "__main__":
