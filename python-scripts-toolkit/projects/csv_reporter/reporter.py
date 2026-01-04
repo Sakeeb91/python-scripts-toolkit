@@ -4,13 +4,24 @@ CSV Report Generator - Reads CSV files and generates summary reports.
 Supports advanced statistics including median, standard deviation, variance,
 and percentiles (P25, P50, P75) using Python's statistics module.
 
+Also supports chart/visualization generation with matplotlib (optional).
+Supported chart types: bar, hbar (horizontal bar), pie, line.
+
 Usage:
+    # Basic reports
     python -m projects.csv_reporter.reporter input.csv
     python -m projects.csv_reporter.reporter input.csv --output report.txt
     python -m projects.csv_reporter.reporter input.csv --filter-column category --filter-value "Food"
     python -m projects.csv_reporter.reporter input.csv --date-from 2024-01-01 --date-to 2024-12-31
     python -m projects.csv_reporter.reporter input.csv --full-stats
     python -m projects.csv_reporter.reporter input.csv --stats median,stdev,p75
+
+    # Chart generation (requires matplotlib)
+    python -m projects.csv_reporter.reporter expenses.csv --group-by category --chart
+    python -m projects.csv_reporter.reporter expenses.csv --group-by category --chart --chart-type pie
+    python -m projects.csv_reporter.reporter sales.csv --group-by month --chart --chart-type line
+    python -m projects.csv_reporter.reporter data.csv --chart --chart-type bar --chart-output chart.png
+    python -m projects.csv_reporter.reporter data.csv --chart --chart-column revenue --chart-output report.pdf
 """
 import argparse
 import csv
