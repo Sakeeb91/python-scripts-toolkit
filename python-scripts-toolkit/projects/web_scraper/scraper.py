@@ -77,13 +77,61 @@ class WebScraper:
         except (ValueError, IndexError):
             return None
 
-    def _wait(self) -> float:
+    def _parse_rate_limit_headers(self, response) -> Optional[float]:
+        """Parse rate limit headers from server response.
+
+        Supports common rate limiting headers:
+        - Retry-After: seconds to wait before retrying
+        - X-RateLimit-Reset: Unix timestamp when rate limit resets
+        - X-RateLimit-Remaining: if 0, wait until reset
+
+        Returns delay in seconds, or None if no rate limiting detected.
+        """
+        headers = response.headers
+
+        # Check Retry-After header (429 responses typically include this)
+        retry_after = headers.get('Retry-After')
+        if retry_after:
+            try:
+                return float(retry_after)
+            except ValueError:
+                # Retry-After can be a date string, ignore for now
+                pass
+
+        # Check X-RateLimit headers
+        remaining = headers.get('X-RateLimit-Remaining')
+        reset = headers.get('X-RateLimit-Reset')
+
+        if remaining is not None and reset:
+            try:
+                if int(remaining) == 0:
+                    reset_time = int(reset)
+                    current_time = int(time.time())
+                    if reset_time > current_time:
+                        return float(reset_time - current_time)
+            except (ValueError, TypeError):
+                pass
+
+        return None
+
+    def _wait(self, response=None) -> float:
         """Apply rate limiting delay between requests.
 
         Uses random delay if configured, otherwise uses fixed delay.
+        If respect_rate_limits is enabled and response contains rate limit
+        headers, that delay takes priority.
+
         Returns the actual delay applied in seconds.
         """
         actual_delay = 0.0
+
+        # Check server rate limit headers if enabled
+        if self.respect_rate_limits and response is not None:
+            server_delay = self._parse_rate_limit_headers(response)
+            if server_delay is not None and server_delay > 0:
+                self.logger.info(f"Rate limit detected, waiting {server_delay:.1f}s")
+                time.sleep(server_delay)
+                return server_delay
 
         if self.random_delay:
             min_delay, max_delay = self.random_delay
