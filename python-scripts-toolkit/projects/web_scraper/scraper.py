@@ -55,6 +55,16 @@ class WebScraper:
                 "User-Agent": self.config["user_agent"]
             })
 
+    def _wait(self) -> float:
+        """Apply rate limiting delay between requests.
+
+        Returns the actual delay applied in seconds.
+        """
+        if self.delay > 0:
+            time.sleep(self.delay)
+            return self.delay
+        return 0.0
+
     def fetch(self, url: str) -> Optional[BeautifulSoup]:
         """Fetch a URL with retry logic."""
         if not HAS_DEPENDENCIES:
