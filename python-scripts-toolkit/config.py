@@ -51,6 +51,8 @@ WEB_SCRAPER_CONFIG = {
     "delay": 0,              # Fixed delay between requests (seconds)
     "random_delay": None,    # Random delay range tuple (min, max) in seconds
     "respect_rate_limits": False,  # Parse and respect server rate limit headers
+    # Robots.txt settings
+    "robots_mode": "warn",   # Default mode: "warn" (log warning), "respect" (block), "ignore" (skip check)
 }
 
 # Todo Manager settings

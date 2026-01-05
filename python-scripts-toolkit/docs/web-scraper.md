@@ -10,6 +10,7 @@ A Python script that fetches web pages, extracts structured data using CSS selec
 - [HTTP and Web Fundamentals](#http-and-web-fundamentals)
 - [HTML Parsing Patterns](#html-parsing-patterns)
 - [Rate Limiting](#rate-limiting)
+- [Robots.txt Compliance](#robotstxt-compliance)
 - [Ethical Scraping](#ethical-scraping)
 - [Extending the Project](#extending-the-project)
 
@@ -592,20 +593,121 @@ items = scraper.scrape_paginated(
 
 ---
 
+## Robots.txt Compliance
+
+The web scraper includes built-in support for checking and respecting robots.txt rules. This is a standard practice for ethical web scraping.
+
+### What is robots.txt?
+
+The robots.txt file is a standard way for websites to communicate crawling permissions to web scrapers and search engine bots. It specifies which paths are allowed or disallowed for different user agents.
+
+Example robots.txt:
+```
+User-agent: *
+Disallow: /admin/
+Disallow: /private/
+Crawl-delay: 2
+
+User-agent: Googlebot
+Allow: /
+```
+
+### Robots.txt Modes
+
+| Mode | CLI Flag | Behavior |
+|------|----------|----------|
+| Warn (default) | (none) | Check robots.txt and log warnings for disallowed URLs, but still fetch |
+| Respect | `--respect-robots` | Enforce robots.txt rules, skip disallowed URLs |
+| Ignore | `--ignore-robots` | Skip robots.txt checking entirely |
+
+### Usage Examples
+
+```bash
+# Default mode: warn about disallowed URLs but still fetch
+python main.py scrape https://example.com --output data.csv
+
+# Enforce robots.txt rules (skip disallowed URLs)
+python main.py scrape https://example.com --respect-robots --output data.csv
+
+# Ignore robots.txt checking (for testing or authorized scraping)
+python main.py scrape https://example.com --ignore-robots --output data.csv
+
+# Combine with rate limiting
+python main.py scrape https://example.com --respect-robots --delay 2 --output data.csv
+```
+
+### Programmatic Usage
+
+```python
+from projects.web_scraper.scraper import WebScraper
+
+# Default mode (warn)
+scraper = WebScraper()
+
+# Enforce robots.txt rules
+scraper = WebScraper(robots_mode="respect")
+
+# Ignore robots.txt
+scraper = WebScraper(robots_mode="ignore")
+
+# Check if a URL is allowed
+allowed = scraper.check_robots("https://example.com/page")
+
+# Get blocked URLs after scraping
+items = scraper.scrape_generic("https://example.com")
+stats = scraper.get_rate_stats()
+print(f"Blocked by robots.txt: {stats['blocked_by_robots']}")
+```
+
+### Crawl-delay Support
+
+The scraper automatically honors the `Crawl-delay` directive in robots.txt. When present, it's used as the minimum delay between requests, combined with any configured delay:
+
+```python
+# If robots.txt specifies Crawl-delay: 5
+# and you configure delay=2, the actual delay will be 5 seconds (the larger value)
+scraper = WebScraper(delay=2.0, robots_mode="respect")
+```
+
+### How It Works
+
+1. **Domain Caching**: robots.txt is fetched once per domain and cached for the session
+2. **User-Agent Matching**: Rules are checked against the configured user agent
+3. **Graceful Failure**: If robots.txt can't be fetched, URLs are allowed by default
+4. **Path Matching**: Standard robots.txt path matching rules are followed
+
+### RobotsChecker Class
+
+The `RobotsChecker` class provides low-level access to robots.txt functionality:
+
+```python
+from projects.web_scraper.scraper import RobotsChecker
+
+checker = RobotsChecker(user_agent="MyBot/1.0")
+
+# Check if URL is allowed
+if checker.can_fetch("https://example.com/page"):
+    print("URL is allowed")
+
+# Get Crawl-delay for a domain
+delay = checker.get_crawl_delay("https://example.com/page")
+if delay:
+    print(f"Crawl-delay: {delay} seconds")
+
+# Clear the cache if needed
+checker.clear_cache()
+```
+
+---
+
 ## Ethical Scraping
 
 ### Best Practices
 
-1. **Respect robots.txt**
-   ```python
-   from urllib.robotparser import RobotFileParser
-
-   rp = RobotFileParser()
-   rp.set_url("https://example.com/robots.txt")
-   rp.read()
-
-   if rp.can_fetch("*", "/page"):
-       # OK to scrape
+1. **Respect robots.txt** (built-in support)
+   ```bash
+   # Enforce robots.txt rules
+   python main.py scrape https://example.com --respect-robots -o data.csv
    ```
 
 2. **Rate limiting** (built-in support)
@@ -750,5 +852,7 @@ The Web Scraper teaches these core concepts:
 | URL manipulation | urljoin, parsing |
 | Deduplication | Sets for O(1) lookup |
 | Data persistence | CSV export, JSON state |
+| Rate limiting | Fixed/random delays, server headers |
+| Robots.txt | Built-in compliance checking |
 
 This is a practical introduction to web scraping that demonstrates patterns used in production scrapers while emphasizing ethical practices.

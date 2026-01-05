@@ -205,10 +205,19 @@ def run_scrape(args):
             sys.exit(1)
     respect_rate_limits = getattr(args, 'respect_rate_limits', False)
 
+    # Determine robots mode
+    if getattr(args, 'respect_robots', False):
+        robots_mode = WebScraper.ROBOTS_RESPECT
+    elif getattr(args, 'ignore_robots', False):
+        robots_mode = WebScraper.ROBOTS_IGNORE
+    else:
+        robots_mode = WebScraper.ROBOTS_WARN
+
     scraper = WebScraper(
         delay=delay,
         random_delay=random_delay,
-        respect_rate_limits=respect_rate_limits
+        respect_rate_limits=respect_rate_limits,
+        robots_mode=robots_mode
     )
 
     if args.preset == "hackernews":
@@ -229,12 +238,16 @@ def run_scrape(args):
     if items:
         scraper.save_to_csv(items, args.output, append=args.append)
 
-    # Print rate statistics if rate limiting was used
+    # Print statistics
+    stats = scraper.get_rate_stats()
     if delay or random_delay or respect_rate_limits:
-        stats = scraper.get_rate_stats()
         print(f"\nRate stats: {stats['request_count']} requests, "
               f"{stats['total_delay_time']}s delay, "
               f"{stats['requests_per_minute']} req/min")
+
+    # Print robots.txt statistics if applicable
+    if stats['blocked_by_robots'] > 0:
+        print(f"Robots.txt: {stats['blocked_by_robots']} URLs blocked")
 
 
 def run_todo(args):
@@ -384,6 +397,12 @@ def main():
                                help="Random delay range (e.g., '1-5' for 1-5 seconds)")
     scrape_parser.add_argument("--respect-rate-limits", action="store_true",
                                help="Honor server rate limit headers (Retry-After, X-RateLimit)")
+    # Robots.txt options (mutually exclusive)
+    scrape_robots_group = scrape_parser.add_mutually_exclusive_group()
+    scrape_robots_group.add_argument("--respect-robots", action="store_true",
+                                     help="Enforce robots.txt rules (skip disallowed URLs)")
+    scrape_robots_group.add_argument("--ignore-robots", action="store_true",
+                                     help="Ignore robots.txt checking entirely")
 
     # Todo Manager
     todo_parser = subparsers.add_parser("todo", help="Manage your to-do list")

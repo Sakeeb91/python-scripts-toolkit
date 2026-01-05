@@ -13,6 +13,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
 from urllib.parse import urljoin, urlparse
+from urllib.robotparser import RobotFileParser
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -29,15 +30,128 @@ from utils.logger import setup_logger
 from utils.helpers import load_json, save_json
 
 
+class RobotsChecker:
+    """Checks and enforces robots.txt compliance for web scraping."""
+
+    def __init__(self, user_agent: str = "*"):
+        """Initialize the RobotsChecker.
+
+        Args:
+            user_agent: User agent string to check permissions for.
+        """
+        self.user_agent = user_agent
+        self._cache: Dict[str, RobotFileParser] = {}
+        self._crawl_delays: Dict[str, Optional[float]] = {}
+        self.logger = setup_logger("robots_checker")
+
+    def _get_robots_url(self, url: str) -> str:
+        """Get the robots.txt URL for a given URL."""
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+
+    def _get_domain(self, url: str) -> str:
+        """Extract domain from URL for caching."""
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    def _fetch_robots(self, url: str) -> Optional[RobotFileParser]:
+        """Fetch and parse robots.txt for a domain.
+
+        Args:
+            url: Any URL from the target domain.
+
+        Returns:
+            RobotFileParser instance or None if fetch failed.
+        """
+        domain = self._get_domain(url)
+
+        # Check cache first
+        if domain in self._cache:
+            return self._cache[domain]
+
+        robots_url = self._get_robots_url(url)
+        self.logger.info(f"Fetching robots.txt from {robots_url}")
+
+        rp = RobotFileParser()
+        rp.set_url(robots_url)
+
+        try:
+            rp.read()
+            self._cache[domain] = rp
+
+            # Cache crawl delay
+            crawl_delay = rp.crawl_delay(self.user_agent)
+            self._crawl_delays[domain] = crawl_delay
+            if crawl_delay:
+                self.logger.info(f"Crawl-delay for {domain}: {crawl_delay}s")
+
+            return rp
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch robots.txt from {robots_url}: {e}")
+            # Cache None to avoid repeated failed fetches
+            self._cache[domain] = None
+            self._crawl_delays[domain] = None
+            return None
+
+    def can_fetch(self, url: str) -> bool:
+        """Check if the URL is allowed by robots.txt.
+
+        Args:
+            url: The URL to check.
+
+        Returns:
+            True if allowed, False if disallowed.
+        """
+        rp = self._fetch_robots(url)
+
+        # If robots.txt doesn't exist or failed to fetch, allow by default
+        if rp is None:
+            return True
+
+        allowed = rp.can_fetch(self.user_agent, url)
+        if not allowed:
+            self.logger.warning(f"URL disallowed by robots.txt: {url}")
+
+        return allowed
+
+    def get_crawl_delay(self, url: str) -> Optional[float]:
+        """Get the Crawl-delay directive for a domain.
+
+        Args:
+            url: Any URL from the target domain.
+
+        Returns:
+            Crawl delay in seconds, or None if not specified.
+        """
+        domain = self._get_domain(url)
+
+        # Ensure robots.txt is fetched
+        if domain not in self._crawl_delays:
+            self._fetch_robots(url)
+
+        return self._crawl_delays.get(domain)
+
+    def clear_cache(self):
+        """Clear the robots.txt cache."""
+        self._cache.clear()
+        self._crawl_delays.clear()
+
+
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
+
+    # Robots.txt mode constants
+    ROBOTS_WARN = "warn"      # Default: check and warn but don't block
+    ROBOTS_RESPECT = "respect"  # Enforce: skip disallowed URLs
+    ROBOTS_IGNORE = "ignore"   # Skip checking entirely
 
     def __init__(
         self,
         dedupe_file: Optional[Path] = None,
         delay: Optional[float] = None,
         random_delay: Optional[tuple] = None,
-        respect_rate_limits: bool = False
+        respect_rate_limits: bool = False,
+        robots_mode: str = "warn"
     ):
         self.logger = setup_logger("web_scraper")
         self.config = WEB_SCRAPER_CONFIG
@@ -50,10 +164,19 @@ class WebScraper:
         self.random_delay = random_delay or self.config["random_delay"]
         self.respect_rate_limits = respect_rate_limits or self.config["respect_rate_limits"]
 
-        # Request statistics
+        # Robots.txt configuration
+        self.robots_mode = robots_mode
+        self.robots_checker = None
+        if robots_mode != self.ROBOTS_IGNORE:
+            self.robots_checker = RobotsChecker(
+                user_agent=self.config["user_agent"]
+            )
+
+        # Statistics
         self.request_count = 0
         self.total_delay_time = 0.0
         self.start_time = None
+        self.blocked_urls: List[str] = []  # URLs blocked by robots.txt
 
         if self.session:
             self.session.headers.update({
@@ -119,12 +242,17 @@ class WebScraper:
 
         return None
 
-    def _wait(self, response=None) -> float:
+    def _wait(self, response=None, url: str = None) -> float:
         """Apply rate limiting delay between requests.
 
         Uses random delay if configured, otherwise uses fixed delay.
         If respect_rate_limits is enabled and response contains rate limit
         headers, that delay takes priority.
+        If robots.txt Crawl-delay is set, it's used as a minimum delay.
+
+        Args:
+            response: HTTP response to check for rate limit headers.
+            url: URL being fetched (for Crawl-delay lookup).
 
         Returns the actual delay applied in seconds.
         """
@@ -138,12 +266,23 @@ class WebScraper:
                 time.sleep(server_delay)
                 return server_delay
 
+        # Get robots.txt Crawl-delay as minimum
+        crawl_delay = 0.0
+        if url and self.robots_checker:
+            cd = self.robots_checker.get_crawl_delay(url)
+            if cd is not None:
+                crawl_delay = cd
+
         if self.random_delay:
             min_delay, max_delay = self.random_delay
             actual_delay = random.uniform(min_delay, max_delay)
-            time.sleep(actual_delay)
         elif self.delay > 0:
             actual_delay = self.delay
+
+        # Use the larger of configured delay and Crawl-delay
+        actual_delay = max(actual_delay, crawl_delay)
+
+        if actual_delay > 0:
             time.sleep(actual_delay)
 
         return actual_delay
@@ -157,6 +296,7 @@ class WebScraper:
         - elapsed_time: total time since first request (seconds)
         - avg_delay: average delay per request (seconds)
         - requests_per_minute: effective request rate
+        - blocked_by_robots: count of URLs blocked by robots.txt
         """
         elapsed = 0.0
         if self.start_time is not None:
@@ -175,13 +315,42 @@ class WebScraper:
             "total_delay_time": round(self.total_delay_time, 2),
             "elapsed_time": round(elapsed, 2),
             "avg_delay": round(avg_delay, 2),
-            "requests_per_minute": round(rpm, 1)
+            "requests_per_minute": round(rpm, 1),
+            "blocked_by_robots": len(self.blocked_urls)
         }
 
+    def check_robots(self, url: str) -> bool:
+        """Check if URL is allowed by robots.txt based on current mode.
+
+        Args:
+            url: The URL to check.
+
+        Returns:
+            True if the URL should be fetched, False if blocked.
+        """
+        if self.robots_mode == self.ROBOTS_IGNORE or not self.robots_checker:
+            return True
+
+        allowed = self.robots_checker.can_fetch(url)
+
+        if not allowed:
+            if self.robots_mode == self.ROBOTS_RESPECT:
+                self.logger.warning(f"Skipping URL disallowed by robots.txt: {url}")
+                self.blocked_urls.append(url)
+                return False
+            else:  # ROBOTS_WARN
+                self.logger.warning(f"WARNING: URL is disallowed by robots.txt: {url}")
+
+        return True
+
     def fetch(self, url: str) -> Optional[BeautifulSoup]:
-        """Fetch a URL with retry logic and rate limiting."""
+        """Fetch a URL with retry logic, rate limiting, and robots.txt checking."""
         if not HAS_DEPENDENCIES:
             self.logger.error("Missing dependencies. Run: pip install requests beautifulsoup4")
+            return None
+
+        # Check robots.txt before fetching
+        if not self.check_robots(url):
             return None
 
         # Track start time on first request
@@ -190,7 +359,7 @@ class WebScraper:
 
         # Apply rate limiting delay before request (except first)
         if self.request_count > 0:
-            delay_applied = self._wait()
+            delay_applied = self._wait(url=url)
             self.total_delay_time += delay_applied
 
         for attempt in range(self.config["retry_attempts"]):
@@ -203,7 +372,7 @@ class WebScraper:
 
                 # Check for rate limit headers and wait if needed
                 if self.respect_rate_limits:
-                    header_delay = self._wait(response)
+                    header_delay = self._wait(response, url=url)
                     if header_delay > 0:
                         self.total_delay_time += header_delay
 
@@ -412,6 +581,10 @@ Rate limiting:
   %(prog)s https://example.com --random-delay 1-5 --output data.csv
   %(prog)s https://example.com --respect-rate-limits --output data.csv
 
+Robots.txt compliance:
+  %(prog)s https://example.com --respect-robots --output data.csv
+  %(prog)s https://example.com --ignore-robots --output data.csv
+
 Preset scrapers:
   %(prog)s --preset hackernews --output hn.csv
         """
@@ -430,6 +603,12 @@ Preset scrapers:
                         help="Random delay range (e.g., '1-5' for 1-5 seconds)")
     parser.add_argument("--respect-rate-limits", action="store_true",
                         help="Honor server rate limit headers (Retry-After, X-RateLimit)")
+    # Robots.txt options (mutually exclusive)
+    robots_group = parser.add_mutually_exclusive_group()
+    robots_group.add_argument("--respect-robots", action="store_true",
+                              help="Enforce robots.txt rules (skip disallowed URLs)")
+    robots_group.add_argument("--ignore-robots", action="store_true",
+                              help="Ignore robots.txt checking entirely")
 
     args = parser.parse_args()
 
@@ -445,10 +624,19 @@ Preset scrapers:
         if random_delay is None:
             parser.error("Invalid random delay format. Use 'min-max' (e.g., '1-5')")
 
+    # Determine robots mode
+    if args.respect_robots:
+        robots_mode = WebScraper.ROBOTS_RESPECT
+    elif args.ignore_robots:
+        robots_mode = WebScraper.ROBOTS_IGNORE
+    else:
+        robots_mode = WebScraper.ROBOTS_WARN
+
     scraper = WebScraper(
         delay=args.delay,
         random_delay=random_delay,
-        respect_rate_limits=args.respect_rate_limits
+        respect_rate_limits=args.respect_rate_limits,
+        robots_mode=robots_mode
     )
 
     # Use preset or generic scraper
@@ -474,12 +662,16 @@ Preset scrapers:
     else:
         print("No new items to save")
 
-    # Print rate statistics if rate limiting was used
+    # Print statistics
+    stats = scraper.get_rate_stats()
     if args.delay or args.random_delay or args.respect_rate_limits:
-        stats = scraper.get_rate_stats()
         print(f"\nRate stats: {stats['request_count']} requests, "
               f"{stats['total_delay_time']}s delay, "
               f"{stats['requests_per_minute']} req/min")
+
+    # Print robots.txt statistics if applicable
+    if stats['blocked_by_robots'] > 0:
+        print(f"Robots.txt: {stats['blocked_by_robots']} URLs blocked")
 
 
 if __name__ == "__main__":
