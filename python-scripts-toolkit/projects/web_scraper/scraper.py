@@ -377,6 +377,29 @@ class ProxyManager:
 
         return False
 
+    def mark_proxy_failed(self, proxy_url: str) -> bool:
+        """Mark a proxy as failed and remove it from rotation.
+
+        Args:
+            proxy_url: The proxy URL that failed.
+
+        Returns:
+            True if proxy was removed, False if not found.
+        """
+        if proxy_url not in self.proxies:
+            return False
+
+        self.proxies.remove(proxy_url)
+        self.failed_proxies.append(proxy_url)
+
+        # Adjust current_index if needed to prevent out-of-bounds
+        if self.current_index >= len(self.proxies) and self.proxies:
+            self.current_index = 0
+
+        self.logger.warning(f"Removed failed proxy from pool: {proxy_url}")
+        self.logger.info(f"Proxies remaining: {len(self.proxies)}")
+        return True
+
 
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
