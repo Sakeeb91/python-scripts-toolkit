@@ -972,6 +972,8 @@ Preset scrapers:
                         help="Single proxy URL (e.g., 'http://proxy:8080', 'socks5://proxy:1080')")
     parser.add_argument("--proxy-file", type=Path, metavar="FILE",
                         help="File containing proxy list (one per line)")
+    parser.add_argument("--rotate", choices=["round-robin", "random"], default="round-robin",
+                        help="Proxy rotation strategy (default: round-robin)")
 
     args = parser.parse_args()
 
@@ -1001,7 +1003,8 @@ Preset scrapers:
         respect_rate_limits=args.respect_rate_limits,
         robots_mode=robots_mode,
         proxy=args.proxy,
-        proxy_file=args.proxy_file
+        proxy_file=args.proxy_file,
+        proxy_rotation=args.rotate
     )
 
     # Use preset or generic scraper
