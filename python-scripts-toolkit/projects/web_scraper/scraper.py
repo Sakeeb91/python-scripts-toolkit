@@ -137,6 +137,26 @@ class RobotsChecker:
         self._crawl_delays.clear()
 
 
+class ProxyManager:
+    """Manages proxy rotation for web scraping requests."""
+
+    # Rotation strategy constants
+    ROTATION_ROUND_ROBIN = "round-robin"
+    ROTATION_RANDOM = "random"
+
+    def __init__(self, rotation: str = "round-robin"):
+        """Initialize the ProxyManager.
+
+        Args:
+            rotation: Rotation strategy - "round-robin" or "random".
+        """
+        self.rotation = rotation
+        self.proxies: List[str] = []
+        self.failed_proxies: List[str] = []
+        self.current_index: int = 0
+        self.logger = setup_logger("proxy_manager")
+
+
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
 
