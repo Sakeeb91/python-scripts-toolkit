@@ -298,6 +298,19 @@ class ProxyManager:
             self.logger.error(f"Error reading proxy file {file_path}: {e}")
             return loaded_count
 
+    def _get_next_round_robin(self) -> Optional[str]:
+        """Get next proxy using round-robin rotation.
+
+        Returns:
+            Next proxy URL in rotation, or None if pool is empty.
+        """
+        if not self.proxies:
+            return None
+
+        proxy = self.proxies[self.current_index]
+        self.current_index = (self.current_index + 1) % len(self.proxies)
+        return proxy
+
 
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
