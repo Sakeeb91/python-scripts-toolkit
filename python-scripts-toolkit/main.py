@@ -213,15 +213,17 @@ def run_scrape(args):
     else:
         robots_mode = WebScraper.ROBOTS_WARN
 
-    # Get proxy option
+    # Get proxy options
     proxy = getattr(args, 'proxy', None)
+    proxy_file = getattr(args, 'proxy_file', None)
 
     scraper = WebScraper(
         delay=delay,
         random_delay=random_delay,
         respect_rate_limits=respect_rate_limits,
         robots_mode=robots_mode,
-        proxy=proxy
+        proxy=proxy,
+        proxy_file=proxy_file
     )
 
     if args.preset == "hackernews":
@@ -410,6 +412,8 @@ def main():
     # Proxy options
     scrape_parser.add_argument("--proxy", metavar="URL",
                                help="Single proxy URL (e.g., 'http://proxy:8080', 'socks5://proxy:1080')")
+    scrape_parser.add_argument("--proxy-file", type=Path, metavar="FILE",
+                               help="File containing proxy list (one per line)")
 
     # Todo Manager
     todo_parser = subparsers.add_parser("todo", help="Manage your to-do list")
