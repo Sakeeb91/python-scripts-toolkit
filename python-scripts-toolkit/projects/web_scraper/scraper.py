@@ -144,6 +144,59 @@ class ProxyManager:
     ROTATION_ROUND_ROBIN = "round-robin"
     ROTATION_RANDOM = "random"
 
+    # Supported proxy schemes
+    SUPPORTED_SCHEMES = {"http", "https", "socks4", "socks5"}
+
+    @staticmethod
+    def parse_proxy_url(proxy_url: str) -> Optional[Dict[str, str]]:
+        """Parse and validate a proxy URL.
+
+        Args:
+            proxy_url: Proxy URL string.
+
+        Returns:
+            Dictionary with parsed components or None if invalid.
+            Keys: scheme, host, port, username, password (optional)
+        """
+        if not proxy_url:
+            return None
+
+        parsed = urlparse(proxy_url)
+
+        # Validate scheme
+        if parsed.scheme not in ProxyManager.SUPPORTED_SCHEMES:
+            return None
+
+        # Must have host and port
+        if not parsed.hostname or not parsed.port:
+            return None
+
+        result = {
+            "scheme": parsed.scheme,
+            "host": parsed.hostname,
+            "port": parsed.port,
+        }
+
+        # Optional authentication
+        if parsed.username:
+            result["username"] = parsed.username
+        if parsed.password:
+            result["password"] = parsed.password
+
+        return result
+
+    @staticmethod
+    def is_valid_proxy(proxy_url: str) -> bool:
+        """Check if a proxy URL is valid.
+
+        Args:
+            proxy_url: Proxy URL to validate.
+
+        Returns:
+            True if valid, False otherwise.
+        """
+        return ProxyManager.parse_proxy_url(proxy_url) is not None
+
     def __init__(self, rotation: str = "round-robin"):
         """Initialize the ProxyManager.
 
