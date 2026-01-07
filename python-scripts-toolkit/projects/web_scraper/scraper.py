@@ -655,8 +655,23 @@ class WebScraper:
 
         return True
 
+    def _get_proxy_dict(self) -> Optional[Dict[str, str]]:
+        """Get the current proxy configuration for requests.
+
+        Returns:
+            Proxy dict for requests library, or None if no proxies configured.
+        """
+        if not self.proxy_manager or not self.proxy_manager.has_proxies():
+            return None
+
+        proxy_url = self.proxy_manager.get_next_proxy()
+        if proxy_url:
+            self.current_proxy = proxy_url
+            return ProxyManager.format_proxy_dict(proxy_url)
+        return None
+
     def fetch(self, url: str) -> Optional[BeautifulSoup]:
-        """Fetch a URL with retry logic, rate limiting, and robots.txt checking."""
+        """Fetch a URL with retry logic, rate limiting, proxy support, and robots.txt checking."""
         if not HAS_DEPENDENCIES:
             self.logger.error("Missing dependencies. Run: pip install requests beautifulsoup4")
             return None
@@ -674,11 +689,17 @@ class WebScraper:
             delay_applied = self._wait(url=url)
             self.total_delay_time += delay_applied
 
+        # Get proxy configuration
+        proxy_dict = self._get_proxy_dict()
+        if proxy_dict:
+            self.logger.debug(f"Using proxy: {self.current_proxy}")
+
         for attempt in range(self.config["retry_attempts"]):
             try:
                 response = self.session.get(
                     url,
-                    timeout=self.config["timeout"]
+                    timeout=self.config["timeout"],
+                    proxies=proxy_dict
                 )
                 self.request_count += 1
 
