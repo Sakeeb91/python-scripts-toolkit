@@ -9,6 +9,7 @@
 
 # Web Scraper (optional - only needed for scrape project)
 requests>=2.28.0
+requests[socks]>=2.28.0  # SOCKS proxy support
 beautifulsoup4>=4.11.0
 
 # CSV Reporter Excel support (optional - only needed for .xlsx files)
