@@ -311,6 +311,29 @@ class ProxyManager:
         self.current_index = (self.current_index + 1) % len(self.proxies)
         return proxy
 
+    def _get_next_random(self) -> Optional[str]:
+        """Get next proxy using random selection.
+
+        Returns:
+            Randomly selected proxy URL, or None if pool is empty.
+        """
+        if not self.proxies:
+            return None
+
+        return random.choice(self.proxies)
+
+    def get_next_proxy(self) -> Optional[str]:
+        """Get the next proxy based on configured rotation strategy.
+
+        Returns:
+            Next proxy URL, or None if pool is empty.
+        """
+        if self.rotation == self.ROTATION_RANDOM:
+            return self._get_next_random()
+        else:
+            # Default to round-robin
+            return self._get_next_round_robin()
+
 
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
