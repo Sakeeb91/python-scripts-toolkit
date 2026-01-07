@@ -53,6 +53,12 @@ WEB_SCRAPER_CONFIG = {
     "respect_rate_limits": False,  # Parse and respect server rate limit headers
     # Robots.txt settings
     "robots_mode": "warn",   # Default mode: "warn" (log warning), "respect" (block), "ignore" (skip check)
+    # Proxy settings
+    "proxy": None,           # Single proxy URL (e.g., "http://proxy:8080", "socks5://proxy:1080")
+    "proxy_file": None,      # Path to file containing proxy list (one per line)
+    "proxy_rotation": "round-robin",  # Rotation strategy: "round-robin" or "random"
+    "proxy_timeout": 10,     # Timeout for proxy connections (seconds)
+    "proxy_retry_failed": True,  # Remove failed proxies from rotation
 }
 
 # Todo Manager settings
