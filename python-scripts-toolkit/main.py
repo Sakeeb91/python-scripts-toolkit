@@ -213,11 +213,15 @@ def run_scrape(args):
     else:
         robots_mode = WebScraper.ROBOTS_WARN
 
+    # Get proxy option
+    proxy = getattr(args, 'proxy', None)
+
     scraper = WebScraper(
         delay=delay,
         random_delay=random_delay,
         respect_rate_limits=respect_rate_limits,
-        robots_mode=robots_mode
+        robots_mode=robots_mode,
+        proxy=proxy
     )
 
     if args.preset == "hackernews":
@@ -403,6 +407,9 @@ def main():
                                      help="Enforce robots.txt rules (skip disallowed URLs)")
     scrape_robots_group.add_argument("--ignore-robots", action="store_true",
                                      help="Ignore robots.txt checking entirely")
+    # Proxy options
+    scrape_parser.add_argument("--proxy", metavar="URL",
+                               help="Single proxy URL (e.g., 'http://proxy:8080', 'socks5://proxy:1080')")
 
     # Todo Manager
     todo_parser = subparsers.add_parser("todo", help="Manage your to-do list")
