@@ -450,7 +450,10 @@ class WebScraper:
         delay: Optional[float] = None,
         random_delay: Optional[tuple] = None,
         respect_rate_limits: bool = False,
-        robots_mode: str = "warn"
+        robots_mode: str = "warn",
+        proxy: Optional[str] = None,
+        proxy_file: Optional[Path] = None,
+        proxy_rotation: str = "round-robin"
     ):
         self.logger = setup_logger("web_scraper")
         self.config = WEB_SCRAPER_CONFIG
@@ -470,6 +473,16 @@ class WebScraper:
             self.robots_checker = RobotsChecker(
                 user_agent=self.config["user_agent"]
             )
+
+        # Proxy configuration
+        self.proxy_manager: Optional[ProxyManager] = None
+        self.current_proxy: Optional[str] = None
+        if proxy or proxy_file:
+            self.proxy_manager = ProxyManager(rotation=proxy_rotation)
+            if proxy:
+                self.proxy_manager.add_proxy(proxy)
+            if proxy_file:
+                self.proxy_manager.load_from_file(Path(proxy_file))
 
         # Statistics
         self.request_count = 0
