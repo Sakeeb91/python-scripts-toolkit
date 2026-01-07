@@ -714,6 +714,22 @@ class WebScraper:
 
             except requests.RequestException as e:
                 self.logger.warning(f"Attempt {attempt + 1} failed: {e}")
+
+                # Check if this is a proxy error and handle it
+                if proxy_dict and self.proxy_manager and ProxyManager.is_proxy_error(e):
+                    self.logger.warning(f"Proxy failure detected: {self.current_proxy}")
+                    self.proxy_manager.mark_proxy_failed(self.current_proxy)
+
+                    # Try next proxy if available
+                    if self.proxy_manager.has_proxies():
+                        proxy_dict = self._get_proxy_dict()
+                        self.logger.info(f"Switching to next proxy: {self.current_proxy}")
+                        continue
+                    else:
+                        # All proxies exhausted, fall back to direct connection
+                        self.logger.warning("All proxies exhausted, falling back to direct connection")
+                        proxy_dict = None
+
                 if attempt < self.config["retry_attempts"] - 1:
                     time.sleep(self.config["retry_delay"])
 
