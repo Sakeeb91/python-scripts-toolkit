@@ -295,22 +295,32 @@ class TestProxyManagerFailure:
         assert manager.failed_count() == 1
 
 
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+
 class TestProxyManagerIsProxyError:
     """Tests for ProxyManager.is_proxy_error()."""
 
+    @pytest.mark.skipif(not HAS_REQUESTS, reason="requests not installed")
     def test_proxy_error_detection(self):
-        """Test detection of proxy-related errors."""
-        proxy_error = Exception("ProxyError: Connection refused")
+        """Test detection of proxy-related errors using requests exceptions."""
+        proxy_error = requests.exceptions.ProxyError("Connection refused")
         assert ProxyManager.is_proxy_error(proxy_error) is True
 
+    @pytest.mark.skipif(not HAS_REQUESTS, reason="requests not installed")
     def test_connection_error_detection(self):
-        """Test detection of connection errors."""
-        conn_error = Exception("Connection refused by proxy")
+        """Test detection of connection errors using requests exceptions."""
+        conn_error = requests.exceptions.ConnectionError("Connection refused")
         assert ProxyManager.is_proxy_error(conn_error) is True
 
+    @pytest.mark.skipif(not HAS_REQUESTS, reason="requests not installed")
     def test_timeout_error_detection(self):
-        """Test detection of timeout errors."""
-        timeout_error = Exception("Connection timed out")
+        """Test detection of timeout errors using requests exceptions."""
+        timeout_error = requests.exceptions.Timeout("Connection timed out")
         assert ProxyManager.is_proxy_error(timeout_error) is True
 
     def test_non_proxy_error(self):
