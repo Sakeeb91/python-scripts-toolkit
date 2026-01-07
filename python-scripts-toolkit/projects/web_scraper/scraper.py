@@ -1,9 +1,15 @@
 """
 Web Scraper + Saver - Fetches web pages and saves structured data to CSV.
 
+Supports proxy rotation for IP rotation and bypassing geographic restrictions.
+
 Usage:
     python -m projects.web_scraper.scraper https://news.ycombinator.com --output hn_stories.csv
     python -m projects.web_scraper.scraper https://example.com --selector "h2.title" --output titles.csv
+
+Proxy examples:
+    python -m projects.web_scraper.scraper https://example.com --proxy http://proxy:8080 -o data.csv
+    python -m projects.web_scraper.scraper https://example.com --proxy-file proxies.txt --rotate random -o data.csv
 """
 import argparse
 import csv
@@ -942,6 +948,12 @@ Rate limiting:
 Robots.txt compliance:
   %(prog)s https://example.com --respect-robots --output data.csv
   %(prog)s https://example.com --ignore-robots --output data.csv
+
+Proxy support:
+  %(prog)s https://example.com --proxy http://proxy:8080 --output data.csv
+  %(prog)s https://example.com --proxy socks5://proxy:1080 --output data.csv
+  %(prog)s https://example.com --proxy-file proxies.txt --output data.csv
+  %(prog)s https://example.com --proxy-file proxies.txt --rotate random --output data.csv
 
 Preset scrapers:
   %(prog)s --preset hackernews --output hn.csv
