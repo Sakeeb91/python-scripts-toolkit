@@ -216,6 +216,7 @@ def run_scrape(args):
     # Get proxy options
     proxy = getattr(args, 'proxy', None)
     proxy_file = getattr(args, 'proxy_file', None)
+    proxy_rotation = getattr(args, 'rotate', 'round-robin')
 
     scraper = WebScraper(
         delay=delay,
@@ -223,7 +224,8 @@ def run_scrape(args):
         respect_rate_limits=respect_rate_limits,
         robots_mode=robots_mode,
         proxy=proxy,
-        proxy_file=proxy_file
+        proxy_file=proxy_file,
+        proxy_rotation=proxy_rotation
     )
 
     if args.preset == "hackernews":
@@ -414,6 +416,8 @@ def main():
                                help="Single proxy URL (e.g., 'http://proxy:8080', 'socks5://proxy:1080')")
     scrape_parser.add_argument("--proxy-file", type=Path, metavar="FILE",
                                help="File containing proxy list (one per line)")
+    scrape_parser.add_argument("--rotate", choices=["round-robin", "random"], default="round-robin",
+                               help="Proxy rotation strategy (default: round-robin)")
 
     # Todo Manager
     todo_parser = subparsers.add_parser("todo", help="Manage your to-do list")
