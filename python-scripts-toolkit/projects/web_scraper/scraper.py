@@ -400,6 +400,41 @@ class ProxyManager:
         self.logger.info(f"Proxies remaining: {len(self.proxies)}")
         return True
 
+    def has_proxies(self) -> bool:
+        """Check if there are any proxies available in the pool.
+
+        Returns:
+            True if at least one proxy is available.
+        """
+        return len(self.proxies) > 0
+
+    def proxy_count(self) -> int:
+        """Get the number of active proxies in the pool.
+
+        Returns:
+            Number of proxies currently available.
+        """
+        return len(self.proxies)
+
+    def failed_count(self) -> int:
+        """Get the number of failed proxies.
+
+        Returns:
+            Number of proxies that have been marked as failed.
+        """
+        return len(self.failed_proxies)
+
+    def get_current_proxy_dict(self) -> Optional[Dict[str, str]]:
+        """Get the current proxy formatted for requests library.
+
+        Returns:
+            Proxy dict for requests, or None if no proxies available.
+        """
+        proxy_url = self.get_next_proxy()
+        if proxy_url:
+            return self.format_proxy_dict(proxy_url)
+        return None
+
 
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
