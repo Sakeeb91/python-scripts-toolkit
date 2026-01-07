@@ -967,6 +967,9 @@ Preset scrapers:
                               help="Enforce robots.txt rules (skip disallowed URLs)")
     robots_group.add_argument("--ignore-robots", action="store_true",
                               help="Ignore robots.txt checking entirely")
+    # Proxy options
+    parser.add_argument("--proxy", metavar="URL",
+                        help="Single proxy URL (e.g., 'http://proxy:8080', 'socks5://proxy:1080')")
 
     args = parser.parse_args()
 
@@ -994,7 +997,8 @@ Preset scrapers:
         delay=args.delay,
         random_delay=random_delay,
         respect_rate_limits=args.respect_rate_limits,
-        robots_mode=robots_mode
+        robots_mode=robots_mode,
+        proxy=args.proxy
     )
 
     # Use preset or generic scraper
