@@ -609,6 +609,8 @@ class WebScraper:
         - avg_delay: average delay per request (seconds)
         - requests_per_minute: effective request rate
         - blocked_by_robots: count of URLs blocked by robots.txt
+        - proxies_active: number of active proxies (if proxy configured)
+        - proxies_failed: number of failed proxies (if proxy configured)
         """
         elapsed = 0.0
         if self.start_time is not None:
@@ -622,7 +624,7 @@ class WebScraper:
         if elapsed > 0:
             rpm = (self.request_count / elapsed) * 60
 
-        return {
+        stats = {
             "request_count": self.request_count,
             "total_delay_time": round(self.total_delay_time, 2),
             "elapsed_time": round(elapsed, 2),
@@ -630,6 +632,13 @@ class WebScraper:
             "requests_per_minute": round(rpm, 1),
             "blocked_by_robots": len(self.blocked_urls)
         }
+
+        # Add proxy statistics if proxy manager is configured
+        if self.proxy_manager:
+            stats["proxies_active"] = self.proxy_manager.proxy_count()
+            stats["proxies_failed"] = self.proxy_manager.failed_count()
+
+        return stats
 
     def check_robots(self, url: str) -> bool:
         """Check if URL is allowed by robots.txt based on current mode.
