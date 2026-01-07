@@ -156,6 +156,29 @@ class ProxyManager:
         self.current_index: int = 0
         self.logger = setup_logger("proxy_manager")
 
+    def add_proxy(self, proxy_url: str) -> bool:
+        """Add a single proxy to the rotation pool.
+
+        Args:
+            proxy_url: Proxy URL (e.g., "http://proxy:8080", "socks5://user:pass@proxy:1080")
+
+        Returns:
+            True if proxy was added successfully, False if invalid or duplicate.
+        """
+        if not proxy_url or not proxy_url.strip():
+            return False
+
+        proxy_url = proxy_url.strip()
+
+        # Avoid duplicates
+        if proxy_url in self.proxies:
+            self.logger.debug(f"Proxy already in pool: {proxy_url}")
+            return False
+
+        self.proxies.append(proxy_url)
+        self.logger.info(f"Added proxy to pool: {proxy_url}")
+        return True
+
 
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
