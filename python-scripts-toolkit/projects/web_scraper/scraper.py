@@ -179,6 +179,44 @@ class ProxyManager:
         self.logger.info(f"Added proxy to pool: {proxy_url}")
         return True
 
+    def load_from_file(self, file_path: Path) -> int:
+        """Load proxies from a file (one proxy per line).
+
+        Args:
+            file_path: Path to the proxy list file.
+
+        Returns:
+            Number of proxies successfully loaded.
+
+        File format:
+            http://proxy1:8080
+            http://user:pass@proxy2:8080
+            socks5://proxy3:1080
+            # Comments and empty lines are ignored
+        """
+        file_path = Path(file_path)
+        if not file_path.exists():
+            self.logger.error(f"Proxy file not found: {file_path}")
+            return 0
+
+        loaded_count = 0
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if not line or line.startswith('#'):
+                        continue
+                    if self.add_proxy(line):
+                        loaded_count += 1
+
+            self.logger.info(f"Loaded {loaded_count} proxies from {file_path}")
+            return loaded_count
+
+        except Exception as e:
+            self.logger.error(f"Error reading proxy file {file_path}: {e}")
+            return loaded_count
+
 
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
