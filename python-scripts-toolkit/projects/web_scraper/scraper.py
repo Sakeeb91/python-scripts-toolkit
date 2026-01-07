@@ -197,6 +197,34 @@ class ProxyManager:
         """
         return ProxyManager.parse_proxy_url(proxy_url) is not None
 
+    @staticmethod
+    def format_proxy_dict(proxy_url: str) -> Optional[Dict[str, str]]:
+        """Format a proxy URL as a requests-compatible proxy dict.
+
+        Handles authentication by including credentials in the URL.
+        For SOCKS proxies, uses the appropriate scheme prefix.
+
+        Args:
+            proxy_url: Proxy URL string.
+
+        Returns:
+            Dict with 'http' and 'https' keys for requests library,
+            or None if proxy URL is invalid.
+
+        Example:
+            {"http": "http://user:pass@proxy:8080",
+             "https": "http://user:pass@proxy:8080"}
+        """
+        if not ProxyManager.is_valid_proxy(proxy_url):
+            return None
+
+        # For SOCKS proxies, requests uses the same URL for both
+        # For HTTP proxies, we typically use the same proxy for both protocols
+        return {
+            "http": proxy_url,
+            "https": proxy_url
+        }
+
     def __init__(self, rotation: str = "round-robin"):
         """Initialize the ProxyManager.
 
