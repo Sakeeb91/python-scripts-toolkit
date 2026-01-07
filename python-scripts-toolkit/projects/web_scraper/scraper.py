@@ -334,6 +334,49 @@ class ProxyManager:
             # Default to round-robin
             return self._get_next_round_robin()
 
+    @staticmethod
+    def is_proxy_error(exception: Exception) -> bool:
+        """Check if an exception indicates a proxy failure.
+
+        Args:
+            exception: The exception to check.
+
+        Returns:
+            True if the exception is likely caused by a proxy issue.
+        """
+        if not HAS_DEPENDENCIES:
+            return False
+
+        # Check for proxy-related connection errors
+        error_str = str(exception).lower()
+        proxy_error_indicators = [
+            "proxyerror",
+            "proxy",
+            "tunnel",
+            "connection refused",
+            "connection reset",
+            "connection aborted",
+            "timed out",
+            "timeout",
+            "socks",
+            "sockshttp",
+        ]
+
+        for indicator in proxy_error_indicators:
+            if indicator in error_str:
+                return True
+
+        # Check exception type
+        if hasattr(requests, 'exceptions'):
+            if isinstance(exception, (
+                requests.exceptions.ProxyError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            )):
+                return True
+
+        return False
+
 
 class WebScraper:
     """Scrapes web pages and extracts structured data."""
